@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="DelCorp.Views.LoginPage"
+             Title="Iniciar Sesión">
+
+    <ScrollView>
+        <VerticalStackLayout 
+            Spacing="25" 
+            Padding="30,0" 
+            VerticalOptions="Center">
+
+            <Label 
+                Text="Iniciar Sesión"
+                FontSize="32"
+                HorizontalOptions="Center" />
+
+            <Entry 
+                Placeholder="Correo electrónico"
+                Keyboard="Email"
+                Text="{Binding Email}"
+                />
+
+            <Entry 
+                Placeholder="Contraseña"
+                IsPassword="True"
+                Text="{Binding Password}"
+                />
+
+            <CheckBox 
+                IsChecked="{Binding KeepSessionActive}"
+                Color="Blue"
+                />
+            <Label 
+                Text="Mantener sesión iniciada"
+                VerticalOptions="Center"
+                />
+
+            <Label 
+                Text="{Binding ErrorMessage}"
+                TextColor="Red"
+                FontSize="14"
+                HorizontalOptions="Center"
+                MaxLines="2"
+                LineBreakMode="WordWrap"
+                IsVisible="{Binding HasError}"
+                />
+
+            <Button 
+                Text="Iniciar Sesión"
+                Command="{Binding LoginCommand}"
+                IsEnabled="{Binding IsLoginEnabled}"
+                />
+
+            <Button 
+                Text="¿Olvidaste tu contraseña?"
+                Command="{Binding ForgotPasswordCommand}"
+                BackgroundColor="Transparent"
+                TextColor="Black"
+                IsEnabled="{Binding IsLoginEnabled}"
+                IsVisible="{Binding IsForgotPasswordVisible}"
+                />
+
+            <ActivityIndicator 
+                IsRunning="{Binding IsLoading}"
+                IsVisible="{Binding IsLoading}"
+                Color="Blue"
+                />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

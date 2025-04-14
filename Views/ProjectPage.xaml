@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="DelCorp.Views.ProjectPage"
+             xmlns:viewmodel="clr-namespace:DelCorp.ViewModels"
+             xmlns:model="clr-namespace:DelCorp.Models"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             Title="Proyectos"
+             x:DataType="viewmodel:ProjectViewModel">
+
+    <ContentPage.Behaviors>
+        <toolkit:EventToCommandBehavior Command="{Binding RefreshProjectsCommand}" EventName="Appearing" />
+    </ContentPage.Behaviors>
+
+    <Grid RowDefinitions="Auto,Auto,*" Padding="20">
+
+        <!-- Buscador -->
+        <Border Grid.Row="0" Style="{StaticResource SearchBarBorderStyle}">
+            <SearchBar Style="{StaticResource RoundedSearchBarStyle}"
+                Placeholder="Buscar proyectos..."
+                Text="{Binding SearchTerm}"
+                SearchCommand="{Binding SearchProjectsCommand}"/>
+        </Border>
+
+        <!-- Botón para registrar proyecto -->
+        <Button
+            Grid.Row="1"
+            Text="Registrar Proyecto"
+            Margin="0,10,0,0"
+            Command="{Binding RegistrarProyectoCommand}" />
+
+        <!-- Lista de Proyectos -->
+        <CollectionView 
+            Grid.Row="2"
+            ItemsSource="{Binding Projects}"
+            RemainingItemsThreshold="3"
+            RemainingItemsThresholdReachedCommand="{Binding LoadMoreProjectsCommand}">
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="model:Project">
+                    <SwipeView>
+                        <!-- Opciones de deslizamiento -->
+                        <SwipeView.RightItems>
+                            <SwipeItems>
+                                <SwipeItem 
+                                    Text="Eliminar" 
+                                    BackgroundColor="{StaticResource Error}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:ProjectViewModel}}, 
+                                                     Path=DeleteProjectCommand}"
+                                    CommandParameter="{Binding .}"/>
+                            </SwipeItems>
+                        </SwipeView.RightItems>
+                        <Frame 
+                        BorderColor="LightGray"
+                        Margin="0,5"
+                        Padding="15">
+
+                            <Grid RowDefinitions="Auto,Auto,Auto">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer 
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:ProjectViewModel}}, Path=NavigateToProjectDetailsCommand}"
+                                        CommandParameter="{Binding .}"/>
+                                </Grid.GestureRecognizers>
+                                <Label 
+                                    Grid.Row="0"
+                                    Style="{StaticResource TitleSmall}"
+                                    Text="{Binding NombreProyecto}"/>
+
+                                <Grid 
+                                    Grid.Row="2" 
+                                    ColumnDefinitions="*,*"
+                                    Margin="0,10">
+
+                                    <StackLayout Grid.Column="0">
+                                        <Label 
+                                        Style="{StaticResource LabelSmall}"
+                                        FontAttributes="None"
+                                        Text="Fecha Inicio"/>
+
+                                        <Label 
+                                        Text="{Binding FechaInicioProyecto, StringFormat='{0:dd/MM/yyyy}'}"
+                                        Style="{StaticResource BodySmall}"/>
+                                    </StackLayout>
+
+                                    <StackLayout Grid.Column="1">
+                                        <Label 
+                                        Text="Fecha Fin" 
+                                        FontAttributes="None"
+                                        Style="{StaticResource LabelSmall}"/>
+
+                                        <Label 
+                                        Text="{Binding FechaFinProyecto, StringFormat='{0:dd/MM/yyyy}'}"
+                                        Style="{StaticResource BodySmall}"/>
+                                    </StackLayout>
+                                </Grid>
+                            </Grid>
+                        </Frame>
+                    </SwipeView>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+            <CollectionView.Footer>
+                <Grid IsVisible="{Binding IsLoadingMore}">
+                    <ActivityIndicator 
+                        IsRunning="{Binding IsLoadingMore}"
+                        Color="{StaticResource Primary}"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"/>
+                </Grid>
+            </CollectionView.Footer>
+
+            <CollectionView.EmptyView>
+                <Label 
+                    Text="No se encontraron proyectos" 
+                    HorizontalOptions="Center" 
+                    VerticalOptions="Center"/>
+            </CollectionView.EmptyView>
+        </CollectionView>
+    </Grid>
+</ContentPage>

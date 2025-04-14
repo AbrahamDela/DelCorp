@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="DelCorp.Views.AddProjectPage"
+             Title="Nuevo Proyecto">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="15">
+
+            <Label 
+            Text="Nombre del Proyecto" />
+            <Entry Text="{Binding NewProject.NombreProyecto}" Placeholder="Nombre del proyecto" />
+
+            <Label Text="Dirección" />
+            <Entry Text="{Binding NewProject.DireccionProyecto}" Placeholder="Dirección del proyecto" />
+
+            <Label Text="Latitud" />
+            <Entry Text="{Binding NewProject.LatitudProyecto}" Placeholder="Latitud" Keyboard="Numeric" />
+
+            <Label Text="Longitud" />
+            <Entry Text="{Binding NewProject.LongitudProyecto}" Placeholder="Longitud" Keyboard="Numeric" />
+
+            <Label Text="Fecha de Inicio" />
+            <DatePicker Date="{Binding NewProject.FechaInicioProyecto}" />
+
+            <Label Text="Fecha de Finalización" />
+            <DatePicker Date="{Binding NewProject.FechaFinProyecto}" />
+
+            <Label Text="Descripción" />
+            <Editor Text="{Binding NewProject.DescripcionProyecto}" Placeholder="Descripción del proyecto" AutoSize="TextChanges" />
+
+            <Button Text="Guardar Proyecto" 
+            Command="{Binding SaveProjectCommand}"
+            BackgroundColor="{StaticResource Success}"
+            TextColor="{StaticResource Info}"
+            Margin="0,20,0,0"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

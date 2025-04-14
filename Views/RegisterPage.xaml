@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"  
+            xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"  
+            x:Class="DelCorp.Views.RegisterPage"  
+            Title="Crear Cuenta">
+
+    <ScrollView>  
+       <VerticalStackLayout  
+           Spacing="20"  
+           Padding="30"  
+           VerticalOptions="Center">  
+
+           <!-- Título -->  
+           <Label  
+               Text="Crear Cuenta"  
+               FontSize="32"  
+               HorizontalOptions="Center"  
+               TextColor="White"  
+               FontAttributes="Bold"/>  
+
+           <!-- Nombre Completo -->  
+           <Entry  
+               Placeholder="Nombre Completo"  
+               Text="{Binding Name}"  
+               PlaceholderColor="Gray"  
+               TextColor="White"  
+               BackgroundColor="Transparent"  
+               Keyboard="Default"/>  
+
+           <!-- Email -->  
+           <Entry  
+               Placeholder="Correo Electrónico"  
+               Text="{Binding Email}"  
+               Keyboard="Email"  
+               PlaceholderColor="Gray"  
+               TextColor="White"  
+               BackgroundColor="Transparent"/>  
+
+           <!-- Contraseña -->  
+           <Entry  
+               Placeholder="Contraseña"  
+               IsPassword="True"  
+               Text="{Binding Password}"  
+               PlaceholderColor="Gray"  
+               TextColor="White"  
+               BackgroundColor="Transparent"/>  
+
+           <!-- Confirmar Contraseña -->  
+           <Entry  
+               Placeholder="Confirmar Contraseña"  
+               IsPassword="True"  
+               Text="{Binding ConfirmPassword}"  
+               PlaceholderColor="Gray"  
+               TextColor="White"  
+               BackgroundColor="Transparent"/>  
+
+           <!-- Mensaje de Error -->  
+           <Label  
+               Text="{Binding ErrorMessage}"  
+               TextColor="Red"  
+               HorizontalOptions="Center"  
+               IsVisible="{Binding ErrorMessage, Converter={StaticResource StringToBoolConverter}}"/>  
+
+           <!-- Botón de Registro -->  
+           <Button  
+               Text="Registrarse"  
+               Command="{Binding RegisterCommand}"  
+               BackgroundColor="{StaticResource Secondary}"  
+               TextColor="White"  
+               IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"  
+               Margin="20,10"/>  
+
+           <!-- Indicador de Carga -->  
+           <ActivityIndicator  
+               IsRunning="{Binding IsLoading}"  
+               Color="White"  
+               IsVisible="{Binding IsLoading}"/>  
+
+           <!-- Enlace a Iniciar Sesión -->  
+           <HorizontalStackLayout HorizontalOptions="Center">  
+               <Label  
+                   Text="¿Ya tienes una cuenta? "  
+                   TextColor="White"/>  
+               <Label  
+                   Text="Iniciar Sesión"  
+                   TextColor="Yellow">  
+                   <Label.GestureRecognizers>  
+                       <TapGestureRecognizer Command="{Binding NavigateToLoginCommand}"/>  
+                   </Label.GestureRecognizers>  
+               </Label>  
+           </HorizontalStackLayout>  
+       </VerticalStackLayout>  
+   </ScrollView>  
+</ContentPage>

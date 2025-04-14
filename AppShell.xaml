@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="DelCorp.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:DelCorp"
+    xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Behaviors;assembly=CommunityToolkit.Maui"
+    xmlns:views="clr-namespace:DelCorp.Views"
+    Shell.FlyoutBehavior="Flyout"
+    Title="DelCorp">
+
+    <Page.Behaviors>
+        <toolkit:StatusBarBehavior StatusBarColor="{StaticResource Primary}" StatusBarStyle="LightContent" />
+    </Page.Behaviors>
+
+    <ShellContent
+        Title="Proyectos"
+        ContentTemplate="{DataTemplate views:ProjectPage}"
+        Route="ProjectPage" />
+
+    <ShellContent 
+        Route="ProjectDetailPage"
+        ContentTemplate="{DataTemplate views:ProjectDetailPage}" />
+
+    <ShellContent
+        Title="Registro"
+        Route="register"
+        ContentTemplate="{DataTemplate views:RegisterPage}" />
+
+    <ShellContent
+        Title="Perfil"
+        Route="profile"
+        ContentTemplate="{DataTemplate views:UserProfilePage}" />
+
+</Shell>
