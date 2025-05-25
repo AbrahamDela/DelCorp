@@ -435,7 +435,15 @@ namespace DelCorp.Services
                     System.Diagnostics.Debug.WriteLine("[GetEtapasByPresupuestoId] No hay conexión a internet. Solo se usan etapas locales.");
                 }
 
-                System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Retornando {dtoEtapas.Count} etapas.");
+                // **NEW: Populate SubEtapas for each Etapa**
+                foreach (var etapa in dtoEtapas)
+                {
+                    var subEtapas = await GetSubEtapasByEtapaId(etapa.Id);
+                    etapa.SubEtapas = subEtapas.ToList(); // Assuming GetSubEtapasByEtapaId returns IEnumerable<SubEtapa>
+                    System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Cargadas {etapa.SubEtapas.Count} subetapas para Etapa ID: {etapa.Id}");
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Retornando {dtoEtapas.Count} etapas, ahora con sus subetapas pobladas.");
                 return dtoEtapas.OrderBy(e => e.CreatedAt);
             }
             catch (Exception ex)

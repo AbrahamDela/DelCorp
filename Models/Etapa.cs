@@ -20,5 +20,8 @@ namespace DelCorp.Models
         public decimal? ProgresoEtapa { get; set; }
         public long IdPresupuesto { get; set; }
         public long? IdUniMedida { get; set; }
+
+        // Add this line to include SubEtapas
+        public List<SubEtapa> SubEtapas { get; set; } = new List<SubEtapa>();
     }
 }

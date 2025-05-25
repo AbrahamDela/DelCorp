@@ -6,7 +6,7 @@ namespace DelCorp.Models.Supabase;
 [Table("proyectos")]
 public class SupabaseProject : BaseModel
 {
-    [PrimaryKey("id")]
+    [PrimaryKey("id", false)]
     public int Id { get; set; }
 
     [Column("nombre_proyecto")]

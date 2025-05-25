@@ -187,11 +187,19 @@ public class LocalDatabaseService : IDisposable
 
     public async Task SaveSubEtapaAsync(LocalSubEtapa subEtapa)
     {
-        await _database.UpdateAsync(subEtapa);
+        await _database.InsertAsync(subEtapa);
+        System.Diagnostics.Debug.WriteLine($"[LocalDatabaseService.SaveSubEtapaAsync] Attempted InsertAsync for SubEtapa with Id: {subEtapa.Id}, EtapaId: {subEtapa.IdEtapa}");
     }
 
     public async Task DeleteSubEtapasByEtapaIdAsync(long etapaId)
     {
-        await _database.Table<LocalSubEtapa>().Where(x => x.IdEtapa == etapaId).DeleteAsync();
+        var itemsToDelete = await _database.Table<LocalSubEtapa>().Where(x => x.IdEtapa == etapaId).ToListAsync();
+        int countDeleted = 0;
+        foreach (var item in itemsToDelete)
+        {
+            await _database.DeleteAsync(item);
+            countDeleted++;
+        }
+        System.Diagnostics.Debug.WriteLine($"[LocalDatabaseService.DeleteSubEtapasByEtapaIdAsync] Deleted {countDeleted} subetapas for EtapaId: {etapaId}");
     }
 }
