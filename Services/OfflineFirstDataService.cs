@@ -29,12 +29,12 @@ namespace DelCorp.Services
             var localProjects = await _localDatabase.GetLocalPagedProjects(page, pageSize);
             var dtoProjects = localProjects.ToDtoList();
 
-            // Si hay conexión, intentar sincronizar y obtener más proyectos
+            // Si hay conexión, intentar sincronizar y obtener mas proyectos
             if (_connectivity.NetworkAccess == NetworkAccess.Internet)
             {
                 try
                 {
-                    // Obtener proyectos del servidor con paginación
+                    // Obtener proyectos del servidor con paginacion
                     var response = await _supabaseClient
                         .From<SupabaseProject>()
                         .Order(x => x.CreatedAt, Postgrest.Constants.Ordering.Descending)
@@ -86,7 +86,7 @@ namespace DelCorp.Services
             var localProjects = await _localDatabase.GetProjectsAsync();
             var dtoProjects = localProjects.ToDtoList();
 
-            // Si hay conexión, sincronizar con el servidor
+            // Si hay conexion, sincronizar con el servidor
             if (_connectivity.NetworkAccess == NetworkAccess.Internet)
             {
                 try
@@ -113,7 +113,7 @@ namespace DelCorp.Services
                         }
                         else if (localProject.IsSynced)
                         {
-                            // Actualizar solo si está sincronizado (no tiene cambios locales pendientes)
+                            // Actualizar solo si esta sincronizado (no tiene cambios locales pendientes)
                             var updatedLocalProject = dtoRemote.ToLocal();
                             updatedLocalProject.Id = localProject.Id; // Mantener el ID local
                             updatedLocalProject.ServerId = remoteProject.Id;
@@ -128,7 +128,6 @@ namespace DelCorp.Services
                 }
                 catch (Exception ex)
                 {
-                    // Log error (en una implementación real) y continuar con datos locales
                     System.Diagnostics.Debug.WriteLine($"Error al sincronizar: {ex.Message}");
                 }
             }
@@ -154,7 +153,7 @@ namespace DelCorp.Services
         {
             try
             {
-                // Para proyectos nuevos, establecer fecha de creación
+                // Para proyectos nuevos, establecer fecha de creacion
                 if (project.Id == 0)
                 {
                     project.CreatedAt = DateTime.Now;
@@ -171,7 +170,7 @@ namespace DelCorp.Services
 
                 await _localDatabase.SaveProjectAsync(localProject);
 
-                // Si hay conexión, intentar sincronizar con el servidor
+                // Si hay conexion, intentar sincronizar con el servidor
                 if (_connectivity.NetworkAccess == NetworkAccess.Internet)
                 {
                     try
@@ -198,7 +197,7 @@ namespace DelCorp.Services
                 }
                 else
                 {
-                    // Sin conexión, marcar como pendiente
+                    // Sin conexion, marcar como pendiente
                     localProject.IsSynced = false;
                     await _localDatabase.SaveProjectAsync(localProject);
                 }
@@ -228,7 +227,7 @@ namespace DelCorp.Services
                     // Eliminar localmente
                     await _localDatabase.DeleteProjectAsync(localProject);
 
-                    // Si tiene ID de servidor y hay conexión, eliminar en el servidor
+                    // Si tiene ID de servidor y hay conexion, eliminar en el servidor
                     if (localProject.ServerId.HasValue && _connectivity.NetworkAccess == NetworkAccess.Internet)
                     {
                         try
@@ -241,7 +240,7 @@ namespace DelCorp.Services
                         }
                         catch
                         {
-                            // Error al eliminar en el servidor, pero continuamos
+                            // Error al eliminar en el servidor
                         }
                     }
                 }
@@ -299,6 +298,592 @@ namespace DelCorp.Services
                 System.Diagnostics.Debug.WriteLine($"Error al sincronizar: {ex.Message}");
                 return false;
             }
+        }
+
+        public async Task<IEnumerable<Presupuesto>> GetPresupuestosByProjectId(int projectId)
+        {
+            try
+            {
+                // Primero, buscar presupuestos locales para el proyecto
+                var localPresupuestos = await _localDatabase.GetPresupuestosByProjectIdAsync(projectId);
+                var dtoPresupuestos = localPresupuestos.ToDtoList();
+
+                // Si hay conexión a internet, intentar sincronizar
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    try
+                    {
+                        // Obtener presupuestos del servidor para este proyecto
+                        var response = await _supabaseClient
+                            .From<SupabasePresupuesto>()
+                            .Filter("id_proyecto", Postgrest.Constants.Operator.Equals, projectId)
+                            .Order(x => x.CreatedAt, Postgrest.Constants.Ordering.Descending)
+                            .Get();
+
+                        var remotePresupuestos = response.Models;
+
+                        // Procesar y sincronizar presupuestos remotos
+                        foreach (var remotePresupuesto in remotePresupuestos)
+                        {
+                            var dtoRemote = remotePresupuesto.ToDto();
+                            var localPresupuesto = await _localDatabase.GetPresupuestoByServerIdAsync(remotePresupuesto.Id);
+
+                            if (localPresupuesto == null)
+                            {
+                                // Nuevo presupuesto del servidor
+                                var newLocalPresupuesto = dtoRemote.ToLocal();
+                                newLocalPresupuesto.IsSynced = true;
+                                await _localDatabase.SavePresupuestoAsync(newLocalPresupuesto);
+                            }
+                            else if (localPresupuesto.IsSynced)
+                            {
+                                // Actualizar presupuesto existente
+                                var updatedLocalPresupuesto = dtoRemote.ToLocal();
+                                updatedLocalPresupuesto.Id = localPresupuesto.Id;
+                                updatedLocalPresupuesto.ServerId = remotePresupuesto.Id;
+                                updatedLocalPresupuesto.IsSynced = true;
+                                await _localDatabase.SavePresupuestoAsync(updatedLocalPresupuesto);
+                            }
+                        }
+
+                        // Recargar presupuestos locales
+                        localPresupuestos = await _localDatabase.GetPresupuestosByProjectIdAsync(projectId);
+                        dtoPresupuestos = localPresupuestos.ToDtoList();
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error al sincronizar presupuestos: {ex.Message}");
+                    }
+                }
+
+                return dtoPresupuestos.OrderByDescending(p => p.CreatedAt);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error al obtener presupuestos: {ex.Message}");
+                return Enumerable.Empty<Presupuesto>();
+            }
+        }
+
+        //Etapas de presupuestos
+        public async Task<IEnumerable<Etapa>> GetEtapasByPresupuestoId(int presupuestoId)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] INICIO para presupuestoId: {presupuestoId}");
+
+                // 1. Obtener etapas locales
+                System.Diagnostics.Debug.WriteLine($"Retornar etapas localmente del presupuesto ID: {presupuestoId}");
+                var localEtapas = await _localDatabase.GetEtapasByPresupuestoIdAsync(presupuestoId);
+                System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Etapas locales encontradas: {localEtapas.Count}");
+                var dtoEtapas = localEtapas.Select(e => e.ToDto()).ToList();
+
+                // Si hay conexión a internet, sincronizar
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    System.Diagnostics.Debug.WriteLine("[GetEtapasByPresupuestoId] Hay conexión a internet. Consultando servidor...");
+                    try
+                    {
+                        var response = await _supabaseClient
+                            .From<SupabaseEtapa>()
+                            .Filter("id_presupuesto", Postgrest.Constants.Operator.Equals, presupuestoId)
+                            .Order(x => x.CreatedAt, Postgrest.Constants.Ordering.Descending)
+                            .Get();
+
+                        var remoteEtapas = response.Models;
+                        System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Etapas remotas encontradas: {remoteEtapas.Count}");
+
+                        if (remoteEtapas.Any())
+                        {
+                            await _localDatabase.DeleteEtapasByPresupuestoIdAsync(presupuestoId);
+                            System.Diagnostics.Debug.WriteLine("[GetEtapasByPresupuestoId] Etapas locales eliminadas para sincronización.");
+
+                            foreach (var remoteEtapa in remoteEtapas)
+                            {
+                                var dtoRemote = remoteEtapa.ToDto();
+                                var localEtapa = dtoRemote.ToLocal();
+
+                                // Asigna siempre el IdPresupuesto local recibido
+                                localEtapa.IdPresupuesto = presupuestoId;
+                                System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Asignando SIEMPRE IdPresupuesto local {presupuestoId} a etapa remota {localEtapa.Id}");
+
+                                localEtapa.IsSynced = true;
+                                await _localDatabase.SaveEtapaAsync(localEtapa);
+                                System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Etapa remota guardada localmente: Id={localEtapa.Id}, Actividad={localEtapa.ActividadEtapa}, PresupuestoId={localEtapa.IdPresupuesto},");
+                            }
+
+
+                            // Recargar etapas locales
+                            System.Diagnostics.Debug.WriteLine($"Retornar etapas localmente del presupuesto ID: {presupuestoId}");
+                            localEtapas = await _localDatabase.GetEtapasByPresupuestoIdAsync(presupuestoId);
+                            System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Etapas locales recargadas: {localEtapas.Count}");
+                            dtoEtapas = localEtapas.ToDtoList();
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("[GetEtapasByPresupuestoId] No se encontraron etapas remotas.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Error al sincronizar etapas: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Error al sincronizar etapas: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("[GetEtapasByPresupuestoId] No hay conexión a internet. Solo se usan etapas locales.");
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Retornando {dtoEtapas.Count} etapas.");
+                return dtoEtapas.OrderBy(e => e.CreatedAt);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error al obtener etapas: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Error al obtener etapas: {ex.Message}");
+                return Enumerable.Empty<Etapa>();
+            }
+        }
+
+        public async Task<Etapa> SaveEtapa(Etapa etapa)
+        {
+            try
+            {
+                // Convertir a modelo local
+                var localEtapa = etapa.ToLocal();
+
+                // Guardar localmente
+                await _localDatabase.SaveEtapaAsync(localEtapa);
+
+                // Si hay conexión a internet, sincronizar con el servidor
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    try
+                    {
+                        // Convertir a modelo Supabase
+                        var supabaseEtapa = etapa.ToSupabase();
+
+                        // Enviar al servidor
+                        var response = await _supabaseClient.From<SupabaseEtapa>().Upsert(supabaseEtapa);
+                        var syncedEtapa = response.Models.FirstOrDefault();
+
+                        if (syncedEtapa != null)
+                        {
+                            // Actualizar con el ID del servidor
+                            localEtapa.Id = syncedEtapa.Id;
+                            localEtapa.IsSynced = true;
+                            await _localDatabase.SaveEtapaAsync(localEtapa);
+
+                            // Devolver el DTO actualizado
+                            return syncedEtapa.ToDto();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Error al sincronizar etapa: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"Error al sincronizar etapa: {ex.Message}");
+
+                        // Marcar como no sincronizado
+                        localEtapa.IsSynced = false;
+                        await _localDatabase.SaveEtapaAsync(localEtapa);
+                    }
+                }
+
+                return localEtapa.ToDto();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error al guardar etapa: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error al guardar etapa: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task DeleteEtapa(long etapaId)
+        {
+            try
+            {
+                // Buscar etapa local
+                var localEtapa = await _localDatabase.GetEtapaByIdAsync(etapaId);
+
+                if (localEtapa != null)
+                {
+                    // Eliminar localmente
+                    await _localDatabase.DeleteEtapaAsync(localEtapa);
+
+                    // Si hay conexión a internet y tiene ID de servidor, eliminar en el servidor
+                    if (localEtapa.ServerId.HasValue && _connectivity.NetworkAccess == NetworkAccess.Internet)
+                    {
+                        try
+                        {
+                            await _supabaseClient
+                                .From<SupabaseEtapa>()
+                                .Filter("id", Postgrest.Constants.Operator.Equals, localEtapa.ServerId.Value)
+                                .Delete();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"Error al eliminar etapa en el servidor: {ex.Message}");
+                            System.Diagnostics.Debug.WriteLine($"Error al eliminar etapa en el servidor: {ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error al eliminar etapa: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error al eliminar etapa: {ex.Message}");
+                throw;
+            }
+        }
+
+        public static long GenerarIdAleatorio()
+        {
+            var buffer = new byte[8];
+            using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(buffer);
+            }
+            long result = BitConverter.ToInt64(buffer, 0);
+            // Asegura que sea positivo
+            return Math.Abs(result);
+        }
+
+        //Mejorarlo solo se muestran los presupuestos que se guardan en el servidor, pero si se estan guardando localmente
+        public async Task<Presupuesto> SavePresupuesto(Presupuesto presupuesto)
+        {
+            try
+            {
+                // Si hay conexión, primero guarda en Supabase para obtener el ID
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    try
+                    {
+                        presupuesto.Id = GenerarIdAleatorio();
+                        presupuesto.CreatedAt = DateTime.Now;
+
+                        // Convertir a modelo Supabase
+                        var supabasePresupuesto = presupuesto.ToSupabase();
+
+                        // Enviar al servidor
+                        var response = await _supabaseClient.From<SupabasePresupuesto>().Upsert(supabasePresupuesto);
+                        var syncedPresupuesto = response.Models.FirstOrDefault();
+
+                        if (syncedPresupuesto != null)
+                        {
+                            // Actualizar el modelo con el ID y fecha generados por Supabase
+                            presupuesto.Id = syncedPresupuesto.Id;
+                            presupuesto.CreatedAt = syncedPresupuesto.CreatedAt;
+
+                            // Guardar localmente con el ID de Supabase
+                            var localPresupuesto = presupuesto.ToLocal();
+                            localPresupuesto.ServerId = syncedPresupuesto.Id;
+                            localPresupuesto.IsSynced = true;
+                            await _localDatabase.SavePresupuestoAsync(localPresupuesto);
+
+                            return syncedPresupuesto.ToDto();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Error al sincronizar presupuesto: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"Error al sincronizar presupuesto: {ex.Message}");
+                    }
+                }
+
+                // Si no hay conexión, guardar localmente sin ID de servidor
+                var localPresupuestoOffline = presupuesto.ToLocal();
+                localPresupuestoOffline.IsSynced = false;
+                await _localDatabase.SavePresupuestoAsync(localPresupuestoOffline);
+
+                return localPresupuestoOffline.ToDto();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error al guardar presupuesto: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error al guardar presupuesto: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<IEnumerable<Presupuesto>> GetAllPresupuestos()
+        {
+            try
+            {
+                // 1. Obtener presupuestos locales
+                var localPresupuestos = await _localDatabase.GetAllPresupuestosAsync();
+                var dtoPresupuestos = localPresupuestos.ToDtoList();
+
+                // 2. Si hay conexion, sincronizar con el servidor
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Hay conexion");
+                    try
+                    {
+                        // 2.1. Sincroniza cambios locales pendientes (presupuestos no sincronizados)
+                        var noSincronoLocalPresupuestos = localPresupuestos.Where(p => !p.IsSynced).ToList();
+                        foreach (var localPresupuesto in noSincronoLocalPresupuestos)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Presupuesto id: {localPresupuesto.Id}"); //Para debugging
+                            try
+                            {
+                                var dto = localPresupuesto.ToDto();
+                                var supabaseModel = dto.ToSupabase();
+
+                                // insertar o actualizar en servidor
+                                var response = await _supabaseClient.From<SupabasePresupuesto>().Upsert(supabaseModel);
+                                var syncedPresupuesto = response.Models.FirstOrDefault();
+
+                                if (syncedPresupuesto != null)
+                                {
+                                    // Actualiza el local con el id de servidor y marca como sincronizado
+                                    System.Diagnostics.Debug.WriteLine($"Presupuesto sincornizado id: {syncedPresupuesto.Id}");
+                                    localPresupuesto.ServerId = syncedPresupuesto.Id;
+                                    localPresupuesto.IsSynced = true;
+                                    await _localDatabase.SavePresupuestoAsync(localPresupuesto);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error al sincronizar presupuesto local: {ex.Message}");
+                                continue;
+                            }
+                        }
+
+                        // 2.2 Descargar todos los presupuestos del servidor
+                        System.Diagnostics.Debug.WriteLine("Descargar todos los presupuestos del servidor");
+                        var responseRemote = await _supabaseClient
+                            .From<SupabasePresupuesto>()
+                            .Order(x => x.CreatedAt, Postgrest.Constants.Ordering.Descending)
+                            .Get();
+
+                        var remotePresupuestos = responseRemote.Models;
+                        System.Diagnostics.Debug.WriteLine($"Presupuestos remotos {remotePresupuestos.Count()}");
+
+                        // 2.3. Agregar solo los presupuestos remotos que no existen localmente
+                        var localServerIds = localPresupuestos
+                            .Where(p => p.ServerId != null)
+                            .Select(p => p.ServerId.Value)
+                            .ToHashSet();
+
+                        foreach (var remotePresupuesto in remotePresupuestos)
+                        {
+                            if (!localServerIds.Contains(remotePresupuesto.Id))
+                            {
+                                var dtoRemote = remotePresupuesto.ToDto();
+                                var newLocal = dtoRemote.ToLocal();
+                                newLocal.IsSynced = true;
+                                await _localDatabase.SavePresupuestoAsync(newLocal);
+                            }
+                        }
+
+                        // 2.4 Recarga todos los locales actualizados
+                        localPresupuestos = await _localDatabase.GetAllPresupuestosAsync();
+                        dtoPresupuestos = localPresupuestos.ToDtoList();
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error al sincronizar presupuestos: {ex.Message}");
+                    }
+                }
+
+                System.Diagnostics.Debug.WriteLine($"Presupuestos retornados: {dtoPresupuestos.Count()}");
+                return dtoPresupuestos.OrderByDescending(p => p.CreatedAt);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error al obtener presupuestos: {ex.Message}");
+                return Enumerable.Empty<Presupuesto>();
+            }
+        }
+
+        public async Task<bool> DeletePresupuesto(long presupuestoId)
+        {
+            try
+            {
+                // Buscar presupuesto local por ServerId o Id local
+                var localPresupuesto = await _localDatabase.GetPresupuestoByServerIdAsync(presupuestoId);
+                if (localPresupuesto == null)
+                {
+                    // Si no se encuentra por ServerId, intenta por Id local
+                    var allLocal = await _localDatabase.GetAllPresupuestosAsync();
+                    localPresupuesto = allLocal.FirstOrDefault(p => p.Id == presupuestoId);
+                }
+
+                if (localPresupuesto != null)
+                {
+                    // Eliminar localmente
+                    await _localDatabase.DeletePresupuestoAsync(localPresupuesto);
+
+                    // Si tiene ServerId y hay conexión, eliminar en el servidor
+                    if (localPresupuesto.ServerId.HasValue && _connectivity.NetworkAccess == NetworkAccess.Internet)
+                    {
+                        try
+                        {
+                            await _supabaseClient
+                                .From<SupabasePresupuesto>()
+                                .Filter("id", Postgrest.Constants.Operator.Equals, (int)localPresupuesto.ServerId.Value)
+                                .Delete();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"Error al eliminar presupuesto en el servidor: {ex.Message}");
+                            System.Diagnostics.Debug.WriteLine($"Error al eliminar presupuesto en el servidor: {ex.Message}");
+                        }
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error al eliminar presupuesto: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error al eliminar presupuesto: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<IEnumerable<SubEtapa>> GetSubEtapasByEtapaId(long etapaId)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] INICIO para EtapaId: {etapaId}");
+
+                // 1. Obtener subetapas locales
+                System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Obteniendo subetapas locales para EtapaId: {etapaId}");
+                var localSubEtapas = await _localDatabase.GetSubEtapasByEtapaIdAsync(etapaId);
+                System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Subetapas locales encontradas: {localSubEtapas.Count}");
+
+                var dtoEtapas = localSubEtapas.Select(e => e.ToDto()).ToList();
+
+                // 2. Si hay conexión a internet, sincronizar con Supabase
+                System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Estado de conexión: {_connectivity.NetworkAccess}");
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    System.Diagnostics.Debug.WriteLine("[GetSubEtapasByEtapaId] Hay conexión a Internet. Consultando servidor Supabase...");
+                    try
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Filtro Supabase: id_etapa == {etapaId} (tipo: {etapaId.GetType()})");
+                        var response = await _supabaseClient
+                            .From<SupabaseSubEtapa>()
+                            .Filter("id_etapa", Postgrest.Constants.Operator.Equals, etapaId.ToString())
+                            .Order(x => x.CreatedAt, Postgrest.Constants.Ordering.Descending)
+                            .Get();
+                        System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Subetapas remotas encontradas: {response.Models.Count}");
+
+                        var remoteSubEtapas = response.Models;
+                        System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Subetapas remotas encontradas: {remoteSubEtapas.Count}");
+
+                        if (remoteSubEtapas.Any())
+                        {
+                            System.Diagnostics.Debug.WriteLine("[GetSubEtapasByEtapaId] Eliminando subetapas locales previas para sincronizar.");
+                            await _localDatabase.DeleteSubEtapasByEtapaIdAsync(etapaId);
+
+                            foreach (var remoteSubEtapa in remoteSubEtapas)
+                            {
+                                var dtoRemote = remoteSubEtapa.ToDto();
+                                var localSubEtapa = dtoRemote.ToLocal();
+
+                                localSubEtapa.IdEtapa = etapaId;
+                                localSubEtapa.IsSynced = true;
+
+                                System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Guardando subetapa remota localmente: Id={localSubEtapa.Id}, Actividad={localSubEtapa.ActividadSubEtapa}, EtapaId={localSubEtapa.IdEtapa}");
+
+                                await _localDatabase.SaveSubEtapaAsync(localSubEtapa);
+                            }
+
+                            // Recargar subetapas locales
+                            System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Recargando subetapas locales tras sincronización para EtapaId: {etapaId}");
+                            localSubEtapas = await _localDatabase.GetSubEtapasByEtapaIdAsync(etapaId);
+                            System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Subetapas locales recargadas: {localSubEtapas.Count}");
+                            dtoEtapas = localSubEtapas.Select(e => e.ToDto()).ToList();
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("[GetSubEtapasByEtapaId] No se encontraron subetapas remotas.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        string msg = $"[GetSubEtapasByEtapaId] Error al sincronizar subetapas: {ex.Message}";
+                        _logger?.LogError(msg);
+                        System.Diagnostics.Debug.WriteLine(msg);
+                        System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] StackTrace: {ex.StackTrace}");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("[GetSubEtapasByEtapaId] No hay conexión a Internet. Se usan solo subetapas locales.");
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Retornando {dtoEtapas.Count} subetapas.");
+                return dtoEtapas.OrderBy(e => e.CreatedAt);
+            }
+            catch (Exception ex)
+            {
+                string msg = $"[GetSubEtapasByEtapaId] Error general al obtener subetapas: {ex.Message}";
+                _logger?.LogError(msg);
+                System.Diagnostics.Debug.WriteLine(msg);
+                return Enumerable.Empty<SubEtapa>();
+            }
+        }
+
+        public async Task SaveSubEtapa(SubEtapa subEtapa)
+        {
+            System.Diagnostics.Debug.WriteLine("Iniciando SaveSubEtapa...");
+
+            // Guardar localmente
+            System.Diagnostics.Debug.WriteLine("Convirtiendo subEtapa a modelo local.");
+            var local = subEtapa.ToLocal();
+
+            System.Diagnostics.Debug.WriteLine($"Guardando subEtapa localmente: {local}");
+            await _localDatabase.SaveSubEtapaAsync(local);
+            System.Diagnostics.Debug.WriteLine("SubEtapa guardada localmente.");
+
+            // Si hay conexión, sincronizar con Supabase
+            System.Diagnostics.Debug.WriteLine($"Estado de conexión: {_connectivity.NetworkAccess}");
+            if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+            {
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine("Conectado a Internet. Iniciando sincronización con Supabase...");
+                    var supabaseModel = subEtapa.ToSupabase();
+
+                    System.Diagnostics.Debug.WriteLine($"Upsert en Supabase con modelo: {supabaseModel}");
+                    var response = await _supabaseClient.From<SupabaseSubEtapa>().Upsert(supabaseModel);
+                    System.Diagnostics.Debug.WriteLine("Respuesta de Supabase recibida.");
+
+                    var synced = response.Models.FirstOrDefault();
+                    if (synced != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Sincronización exitosa. ID sincronizado: {synced.Id}");
+
+                        // Actualiza el ID local si es necesario
+                        local.Id = synced.Id;
+                        System.Diagnostics.Debug.WriteLine($"Actualizando ID local a: {local.Id}");
+                        await _localDatabase.SaveSubEtapaAsync(local);
+                        System.Diagnostics.Debug.WriteLine("ID local actualizado tras la sincronización.");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("Sincronización con Supabase no devolvió ningún modelo.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var msg = $"Error al sincronizar subetapa: {ex.Message}";
+                    _logger?.LogError(msg);
+                    System.Diagnostics.Debug.WriteLine(msg);
+                    System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("No hay conexión a Internet. Sincronización omitida.");
+            }
+
+            System.Diagnostics.Debug.WriteLine("Finalizando SaveSubEtapa.");
         }
     }
 }

@@ -27,15 +27,6 @@
                 Text="{Binding Password}"
                 />
 
-            <CheckBox 
-                IsChecked="{Binding KeepSessionActive}"
-                Color="Blue"
-                />
-            <Label 
-                Text="Mantener sesión iniciada"
-                VerticalOptions="Center"
-                />
-
             <Label 
                 Text="{Binding ErrorMessage}"
                 TextColor="Red"

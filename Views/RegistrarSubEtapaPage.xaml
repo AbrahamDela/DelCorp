@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodel="clr-namespace:DelCorp.ViewModels"
+             x:Class="DelCorp.Views.RegistrarSubEtapaPage"
+             Title="Registrar Subetapa">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18">
+            <Label Text="Actividad de la Subetapa" />
+            <Entry Placeholder="Ej: Armado de acero"
+                   Text="{Binding ActividadSubEtapa}" />
+
+            <Label Text="Cantidad" />
+            <Entry Placeholder="Ej: 5"
+                   Text="{Binding CantidadSubEtapa}" Keyboard="Numeric" />
+
+            <Label Text="Precio Unitario" />
+            <Entry Placeholder="Ej: 100"
+                   Text="{Binding PrecioUniSubEtapa}" Keyboard="Numeric" />
+
+            <Label Text="Precio Unitario Ejecutado" />
+            <Entry Placeholder="Ej: 90"
+                   Text="{Binding PrecioUniEjeSubEtapa}" Keyboard="Numeric" />
+
+            <Label Text="Total Subetapa" />
+            <Entry Placeholder="Ej: 500"
+                   Text="{Binding TotalSubEstapa}" Keyboard="Numeric" />
+
+            <Label Text="Monto Ejecutado Subetapa" />
+            <Entry Placeholder="Ej: 450"
+                   Text="{Binding MontoEjeSubEtapa}" Keyboard="Numeric" />
+
+            <Label Text="Días Calendario" />
+            <Entry Placeholder="Ej: 2"
+                   Text="{Binding DiasCalSubEtapa}" Keyboard="Numeric" />
+
+            <Label Text="Días Ejecutados" />
+            <Entry Placeholder="Ej: 1"
+                   Text="{Binding DiasEjeSubEtapa}" Keyboard="Numeric" />
+
+            <Button Text="Guardar Subetapa"
+                    Command="{Binding GuardarSubEtapaCommand}"/>
+
+            <Label Text="Subetapas registradas" Margin="0,20,0,0"/>
+            <CollectionView ItemsSource="{Binding SubEtapas}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Margin="0,5,0,5" Padding="10" BorderColor="Gray">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding ActividadSubEtapa}" FontAttributes="Bold"/>
+                                <Label Text="Cantidad: {Binding CantidadSubEtapa}" />
+                                <Label Text="Total: {Binding TotalSubEstapa}" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

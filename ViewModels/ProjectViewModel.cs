@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.Maui.Networking;
+using DelCorp.Views;
 
 namespace DelCorp.ViewModels
 {
@@ -360,14 +361,8 @@ namespace DelCorp.ViewModels
 
             try
             {
-                // Usar una ruta absoluta
-                await Shell.Current.GoToAsync(
-                    $"//ProjectDetailPage?project={project.Id}",
-                    new Dictionary<string, object>
-                    {
-                { "Project", project }
-                    }
-                );
+                var uri = $"{nameof(ProjectDetailPage)}?id={project.Id}";
+                await Shell.Current.GoToAsync(uri);
             }
             catch (Exception ex)
             {

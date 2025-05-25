@@ -3,25 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:toolkit="clr-namespace:CommunityToolkit.Maui.Behaviors;assembly=CommunityToolkit.Maui"
              x:Class="DelCorp.Views.UserProfilePage"
-             Title="Perfil de Usuario"
-             BackgroundColor="{StaticResource Primary}">
-
-    <ContentPage.Resources>
-        <Style x:Key="ProfileSectionStyle" TargetType="Frame">
-            <Setter Property="BackgroundColor" Value="White"/>
-            <Setter Property="BorderColor" Value="Transparent"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="Margin" Value="0,10"/>
-            <Setter Property="HasShadow" Value="True"/>
-        </Style>
-
-        <Style x:Key="ProfileLabelStyle" TargetType="Label">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="TextColor" Value="Black"/>
-            <Setter Property="Margin" Value="0,5"/>
-        </Style>
-    </ContentPage.Resources>
+             Title="Perfil de Usuario">
 
     <ScrollView>
         <VerticalStackLayout 
@@ -30,12 +12,12 @@
             VerticalOptions="Start">
 
             <!-- Información de Perfil -->
-            <Frame Style="{StaticResource ProfileSectionStyle}">
+            <Frame>
                 <VerticalStackLayout>
                     <!-- Avatar y Nombre -->
                     <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
 
-                        <Label 
+                        <Label
                             Grid.Column="1"
                             Text="{Binding UserProfile.Name}"
                             FontSize="20"
@@ -52,7 +34,7 @@
             </Frame>
 
             <!-- Detalles de la Cuenta -->
-            <Frame Style="{StaticResource ProfileSectionStyle}">
+            <Frame>
                 <VerticalStackLayout>
                     <Label Text="Detalles de la Cuenta" 
                            FontSize="18" 
@@ -60,44 +42,26 @@
                            TextColor="{StaticResource Primary}"/>
 
                     <StackLayout Orientation="Horizontal" Margin="0,10">
-                        <Label Text="Fecha de Registro:" Style="{StaticResource ProfileLabelStyle}"/>
+                        <Label Text="Fecha de Registro:"/>
                         <Label 
-                            Text="{Binding UserProfile.CreatedAt, StringFormat='{0:dd/MM/yyyy}'}" 
-                            Style="{StaticResource ProfileLabelStyle}"/>
+                            Text="{Binding UserProfile.CreatedAt, StringFormat='{0:dd/MM/yyyy}'}"/>
                     </StackLayout>
 
                     <StackLayout Orientation="Horizontal">
-                        <Label Text="ID de Usuario:" Style="{StaticResource ProfileLabelStyle}"/>
+                        <Label Text="ID de Usuario:"/>
                         <Label 
-                            Text="{Binding UserProfile.Id}" 
-                            Style="{StaticResource ProfileLabelStyle}"/>
+                            Text="{Binding UserProfile.Id}"/>
                     </StackLayout>
                 </VerticalStackLayout>
             </Frame>
 
             <!-- Acciones de Perfil -->
-            <Frame Style="{StaticResource ProfileSectionStyle}">
+            <Frame>
                 <VerticalStackLayout Spacing="10">
                     <Label Text="Acciones" 
                            FontSize="18" 
                            FontAttributes="Bold" 
                            TextColor="{StaticResource Primary}"/>
-
-                    <!-- Botón Editar Perfil -->
-                    <Button 
-                        Text="Editar Perfil"
-                        Command="{Binding EditProfileCommand}"
-                        BackgroundColor="{StaticResource Secondary}"
-                        TextColor="White"
-                        CornerRadius="10"/>
-
-                    <!-- Botón Cambiar Contraseña -->
-                    <Button 
-                        Text="Cambiar Contraseña"
-                        Command="{Binding ChangePasswordCommand}"
-                        BackgroundColor="{StaticResource Secondary}"
-                        TextColor="White"
-                        CornerRadius="10"/>
 
                     <!-- Botón Cerrar Sesión -->
                     <Button 

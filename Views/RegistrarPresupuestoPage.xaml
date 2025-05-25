@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="DelCorp.Views.RegistrarPresupuestoPage"
+             xmlns:viewmodel="clr-namespace:DelCorp.ViewModels"
+             Title="Registrar Presupuesto">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18">
+
+            <Label Text="Nombre del Presupuesto" 
+                   Style="{StaticResource TitleSmall}" />
+            <Entry Placeholder="Ej: Presupuesto de obra"
+                   Text="{Binding NombrePresupuesto}" 
+                   ReturnType="Next"
+                   Keyboard="Default" />
+
+            <Label Text="Fecha de Inicio" 
+                   Style="{StaticResource LabelSmall}" />
+            <DatePicker Date="{Binding FechaInicioPresupuesto}" 
+                        Format="dd/MM/yyyy" />
+
+            <Label Text="Fecha de Fin" 
+                   Style="{StaticResource LabelSmall}" />
+            <DatePicker Date="{Binding FechaFinPresupuesto}" 
+                        Format="dd/MM/yyyy" />
+
+            <Label Text="Proyecto" Style="{StaticResource LabelSmall}" />
+
+            <Entry
+                Placeholder="Escribe el nombre del proyecto"
+                Text="{Binding NombreProyectoBusqueda, Mode=TwoWay}"
+                ReturnType="Next"
+                Keyboard="Default" />
+
+                        <CollectionView
+                            ItemsSource="{Binding ProyectosFiltrados}"
+                            SelectionMode="Single"
+                            SelectedItem="{Binding ProyectoSeleccionado, Mode=TwoWay}"
+                            IsVisible="{Binding HaySugerencias}">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Label Text="{Binding NombreProyecto}" Padding="10" />
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <Button
+                            Text="Registrar nuevo proyecto"
+                            Command="{Binding RegistrarNuevoProyectoCommand}"
+                            IsVisible="{Binding MostrarRegistrarNuevoProyecto}" />
+
+
+
+            <!-- aqui tengo que agregar mas campos -->
+
+            <Button Text="Guardar"
+                    Command="{Binding GuardarCommand}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    Margin="0,30,0,0" />
+
+            <ActivityIndicator 
+                IsRunning="{Binding IsBusy}" 
+                IsVisible="{Binding IsBusy}" 
+                Color="{StaticResource Primary}" 
+                HorizontalOptions="Center" 
+                VerticalOptions="Center"/>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -9,6 +9,11 @@ namespace DelCorp
             InitializeComponent();
 
             RegisterForRoute<AddProjectPage>();
+            RegisterForRoute<ProjectDetailPage>();
+            RegisterForRoute<ManageBudget>();
+            RegisterForRoute<RegistrarPresupuestoPage>();
+            RegisterForRoute<RegistrarEtapaPage>();
+            RegisterForRoute<RegistrarSubEtapaPage>();
         }
 
         protected void RegisterForRoute<T>()

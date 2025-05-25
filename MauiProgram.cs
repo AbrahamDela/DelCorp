@@ -4,6 +4,7 @@ using DelCorp.Services;
 using DelCorp.ViewModels;
 using DelCorp.Views;
 using Microsoft.Extensions.Logging;
+using System.IO;
 
 namespace DelCorp
 {
@@ -21,7 +22,11 @@ namespace DelCorp
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
 
-            builder.Services.AddTransient<LoginPage>();
+            // Configurar ruta de base de datos local
+            string dbPath = Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),
+                "delcorp.db3");
 
             // Supabase
             var url = AppConfig.SUPABASE_URL;
@@ -42,17 +47,28 @@ namespace DelCorp
             builder.Services.AddTransient<LoginViewModel>();
             builder.Services.AddTransient<RegisterViewModel>();
             builder.Services.AddTransient<UserProfileViewModel>();
+            builder.Services.AddTransient<ManageBudgetViewModel>();
+            builder.Services.AddTransient<PresupuestoViewModel>();
+            builder.Services.AddTransient<RegistrarPresupuestoViewModel>();
+            builder.Services.AddTransient<RegistrarEtapaViewModel>();
+            builder.Services.AddTransient<RegistrarSubEtapaViewModel>();
 
             // Views
             builder.Services.AddSingleton<ProjectPage>();
             builder.Services.AddTransient<AddProjectPage>();
             builder.Services.AddTransient<ProjectDetailPage>();
-            
+            builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<RegisterPage>();
             builder.Services.AddTransient<UserProfilePage>();
+            builder.Services.AddTransient<ManageBudget>();
+            builder.Services.AddTransient<PresupuestoPage>();
+            builder.Services.AddTransient<RegistrarPresupuestoPage>();
+            builder.Services.AddTransient<RegistrarEtapaPage>();
+            builder.Services.AddTransient<RegistrarSubEtapaPage>();
 
-            // Servicio de datos (offline-first)
+            // Servicios
             builder.Services.AddSingleton<IDataService, OfflineFirstDataService>();
+            builder.Services.AddSingleton<SupabaseAuthService>();
 
 #if DEBUG
             builder.Logging.AddDebug();

@@ -9,6 +9,17 @@
     Shell.FlyoutBehavior="Flyout"
     Title="DelCorp">
 
+    <Shell.FlyoutHeader>
+        <Grid
+            Padding="20"
+            BackgroundColor="{StaticResource Primary}">
+            <Label
+                Style="{StaticResource TitleLarge}"
+                Text="DelCorp"
+                TextColor="{StaticResource Info}"/>
+        </Grid>
+    </Shell.FlyoutHeader>
+
     <Page.Behaviors>
         <toolkit:StatusBarBehavior StatusBarColor="{StaticResource Primary}" StatusBarStyle="LightContent" />
     </Page.Behaviors>
@@ -18,18 +29,18 @@
         ContentTemplate="{DataTemplate views:ProjectPage}"
         Route="ProjectPage" />
 
-    <ShellContent 
-        Route="ProjectDetailPage"
-        ContentTemplate="{DataTemplate views:ProjectDetailPage}" />
-
     <ShellContent
-        Title="Registro"
-        Route="register"
-        ContentTemplate="{DataTemplate views:RegisterPage}" />
+        Title="Presupuestos"
+        ContentTemplate="{DataTemplate views:PresupuestoPage}"
+        Route="Presupuestos" />
 
     <ShellContent
         Title="Perfil"
         Route="profile"
         ContentTemplate="{DataTemplate views:UserProfilePage}" />
 
+    <ShellContent
+        Title="Registrar Usuario"
+        Route="register"
+        ContentTemplate="{DataTemplate views:RegisterPage}" />
 </Shell>

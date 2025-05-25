@@ -98,5 +98,203 @@ namespace DelCorp.Services.Mapping
             }
             return result;
         }
+
+        public static Presupuesto ToDto(this SupabasePresupuesto supabasePresupuesto)
+        {
+            return new Presupuesto
+            {
+                Id = supabasePresupuesto.Id,
+                CreatedAt = supabasePresupuesto.CreatedAt,
+                NombrePresupuesto = supabasePresupuesto.NombrePresupuesto,
+                TotalPresupuesto = supabasePresupuesto.TotalPresupuesto,
+                MontoEjePrespuesto = supabasePresupuesto.MontoEjePrespuesto,
+                FechaInicioPrespuesto = supabasePresupuesto.FechaInicioPrespuesto,
+                FechaFinPresupuesto = supabasePresupuesto.FechaFinPresupuesto,
+                DiasCalePresupuesto = supabasePresupuesto.DiasCalePresupuesto,
+                DiasEjePresupuesto = supabasePresupuesto.DiasEjePresupuesto,
+                ProgresoPresupuesto = supabasePresupuesto.ProgresoPresupuesto,
+                IdProyecto = supabasePresupuesto.IdProyecto
+            };
+        }
+
+        public static SupabasePresupuesto ToSupabase(this Presupuesto presupuesto)
+        {
+            return new SupabasePresupuesto
+            {
+                Id = presupuesto.Id,
+                CreatedAt = presupuesto.CreatedAt,
+                NombrePresupuesto = presupuesto.NombrePresupuesto,
+                TotalPresupuesto = presupuesto.TotalPresupuesto,
+                MontoEjePrespuesto = presupuesto.MontoEjePrespuesto,
+                FechaInicioPrespuesto = presupuesto.FechaInicioPrespuesto,
+                FechaFinPresupuesto = presupuesto.FechaFinPresupuesto,
+                DiasCalePresupuesto = presupuesto.DiasCalePresupuesto,
+                DiasEjePresupuesto = presupuesto.DiasEjePresupuesto,
+                ProgresoPresupuesto = presupuesto.ProgresoPresupuesto,
+                IdProyecto = presupuesto.IdProyecto
+            };
+        }
+
+        public static Presupuesto ToDto(this LocalPresupuesto localPresupuesto)
+        {
+            return new Presupuesto
+            {
+                Id = localPresupuesto.ServerId ?? localPresupuesto.Id,
+                CreatedAt = localPresupuesto.CreatedAt,
+                NombrePresupuesto = localPresupuesto.NombrePresupuesto,
+                TotalPresupuesto = localPresupuesto.TotalPresupuesto,
+                MontoEjePrespuesto = localPresupuesto.MontoEjePrespuesto,
+                FechaInicioPrespuesto = localPresupuesto.FechaInicioPrespuesto,
+                FechaFinPresupuesto = localPresupuesto.FechaFinPresupuesto,
+                DiasCalePresupuesto = localPresupuesto.DiasCalePresupuesto,
+                DiasEjePresupuesto = localPresupuesto.DiasEjePresupuesto,
+                ProgresoPresupuesto = localPresupuesto.ProgresoPresupuesto,
+                IdProyecto = localPresupuesto.IdProyecto
+            };
+        }
+
+        public static LocalPresupuesto ToLocal(this Presupuesto presupuesto)
+        {
+            return new LocalPresupuesto
+            {
+                ServerId = presupuesto.Id,
+                CreatedAt = presupuesto.CreatedAt,
+                NombrePresupuesto = presupuesto.NombrePresupuesto,
+                TotalPresupuesto = presupuesto.TotalPresupuesto,
+                MontoEjePrespuesto = presupuesto.MontoEjePrespuesto,
+                FechaInicioPrespuesto = presupuesto.FechaInicioPrespuesto,
+                FechaFinPresupuesto = presupuesto.FechaFinPresupuesto,
+                DiasCalePresupuesto = presupuesto.DiasCalePresupuesto,
+                DiasEjePresupuesto = presupuesto.DiasEjePresupuesto,
+                ProgresoPresupuesto = presupuesto.ProgresoPresupuesto,
+                IdProyecto = (int)presupuesto.IdProyecto,
+                IsSynced = true
+            };
+        }
+
+        // Metodo para convertir lista de LocalPresupuesto a lista de Presupuesto
+        public static List<Presupuesto> ToDtoList(this IEnumerable<LocalPresupuesto> localPresupuestos)
+        {
+            return localPresupuestos?
+                .Select(localPresupuesto => localPresupuesto.ToDto())
+                .ToList() ?? new List<Presupuesto>();
+        }
+
+        // Sobrecarga para SupabasePresupuesto
+        public static List<Presupuesto> ToDtoList(this IEnumerable<SupabasePresupuesto> supabasePresupuestos)
+        {
+            return supabasePresupuestos?
+                .Select(supabasePresupuesto => supabasePresupuesto.ToDto())
+                .ToList() ?? new List<Presupuesto>();
+        }
+
+        //Para etapas
+        public static Etapa ToDto(this LocalEtapa local)
+        {
+            if (local == null) return null;
+
+            return new Etapa
+            {
+                Id = local.ServerId ?? local.Id,
+                NumeroEtapa = local.NumeroEtapa,
+                ActividadEtapa = local.ActividadEtapa,
+                CantidadEtapa = local.CantidadEtapa,
+                MontoTotalEtapa = local.MontoTotalEtapa,
+                MontoEjeEtapa = local.MontoEjeEtapa,
+                DiasCalEtapa = local.DiasCalEtapa,
+                DiasEjeEtapa = local.DiasEjeEtapa,
+                ProgresoEtapa = local.ProgresoEtapa,
+                IdPresupuesto = local.IdPresupuesto,
+                IdUniMedida = local.IdUniMedida,
+                CreatedAt = local.CreatedAt
+            };
+        }
+
+        public static LocalEtapa ToLocal(this Etapa dto)
+        {
+            if (dto == null) return null;
+
+            return new LocalEtapa
+            {
+                Id = (int)(dto.Id == 0 ? 0 : (long)dto.Id),
+                ServerId = dto.Id > 0 ? dto.Id : null,
+                NumeroEtapa = dto.NumeroEtapa,
+                ActividadEtapa = dto.ActividadEtapa,
+                CantidadEtapa = dto.CantidadEtapa,
+                MontoTotalEtapa = dto.MontoTotalEtapa,
+                MontoEjeEtapa = dto.MontoEjeEtapa,
+                DiasCalEtapa = dto.DiasCalEtapa,
+                DiasEjeEtapa = dto.DiasEjeEtapa,
+                ProgresoEtapa = dto.ProgresoEtapa,
+                IdPresupuesto = dto.IdPresupuesto,
+                IdUniMedida = dto.IdUniMedida,
+                //CreatedAt = dto.CreatedAt ?? DateTime.Now,
+                IsSynced = true
+            };
+        }
+
+        public static SupabaseEtapa ToSupabase(this Etapa dto)
+        {
+            if (dto == null) return null;
+
+            return new SupabaseEtapa
+            {
+                Id = dto.Id,
+                NumeroEtapa = dto.NumeroEtapa,
+                ActividadEtapa = dto.ActividadEtapa,
+                CantidadEtapa = dto.CantidadEtapa,
+                MontoTotalEtapa = dto.MontoTotalEtapa,
+                MontoEjeEtapa = dto.MontoEjeEtapa,
+                DiasCalEtapa = dto.DiasCalEtapa,
+                DiasEjeEtapa = dto.DiasEjeEtapa,
+                ProgresoEtapa = dto.ProgresoEtapa,
+                IdPresupuesto = dto.IdPresupuesto,
+                IdUniMedida = dto.IdUniMedida,
+                //CreatedAt = dto.CreatedAt ?? DateTime.Now
+            };
+        }
+
+        public static Etapa ToDto(this SupabaseEtapa supabase)
+        {
+            if (supabase == null) return null;
+
+            return new Etapa
+            {
+                Id = supabase.Id,
+                NumeroEtapa = supabase.NumeroEtapa,
+                ActividadEtapa = supabase.ActividadEtapa,
+                CantidadEtapa = supabase.CantidadEtapa,
+                MontoTotalEtapa = supabase.MontoTotalEtapa,
+                MontoEjeEtapa = supabase.MontoEjeEtapa,
+                DiasCalEtapa = supabase.DiasCalEtapa,
+                DiasEjeEtapa = supabase.DiasEjeEtapa,
+                ProgresoEtapa = supabase.ProgresoEtapa,
+                IdPresupuesto = supabase.IdPresupuesto,
+                IdUniMedida = supabase.IdUniMedida,
+                CreatedAt = supabase.CreatedAt
+            };
+        }
+
+        // Método para convertir lista de LocalEtapa a lista de Etapa
+        public static List<Etapa> ToDtoList(this IEnumerable<LocalEtapa> localEtapas)
+        {
+            return localEtapas?
+                .Select(localEtapa => localEtapa.ToDto())
+                .Where(etapa => etapa != null)
+                .GroupBy(etapa => etapa.Id)  // Eliminar duplicados por ID
+                .Select(g => g.First())
+                .ToList() ?? new List<Etapa>();
+        }
+
+        // Método para convertir lista de SupabaseEtapa a lista de Etapa
+        public static List<Etapa> ToDtoList(this IEnumerable<SupabaseEtapa> supabaseEtapas)
+        {
+            return supabaseEtapas?
+                .Select(supabaseEtapa => supabaseEtapa.ToDto())
+                .Where(etapa => etapa != null)
+                .GroupBy(etapa => etapa.Id)  // Eliminar duplicados por ID
+                .Select(g => g.First())
+                .ToList() ?? new List<Etapa>();
+        }
     }
 }

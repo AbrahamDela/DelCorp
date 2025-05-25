@@ -7,8 +7,7 @@
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="15">
 
-            <Label 
-            Text="Nombre del Proyecto" />
+            <Label Text="Nombre del Proyecto" />
             <Entry Text="{Binding NewProject.NombreProyecto}" Placeholder="Nombre del proyecto" />
 
             <Label Text="Dirección" />

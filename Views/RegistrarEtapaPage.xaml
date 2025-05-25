@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="DelCorp.Views.RegistrarEtapaPage"
+             xmlns:viewmodel="clr-namespace:DelCorp.ViewModels"
+             Title="Registrar Etapa">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="18">
+
+            <Label Text="Actividad de la Etapa" 
+                   Style="{StaticResource TitleSmall}" />
+            <Entry Placeholder="Ej: Excavación"
+                   Text="{Binding ActividadEtapa}" 
+                   ReturnType="Next"
+                   Keyboard="Default" />
+
+            <Label Text="Cantidad" 
+                   Style="{StaticResource LabelSmall}" />
+            <Entry Placeholder="Ej: 10"
+                   Text="{Binding CantidadEtapa}" 
+                   Keyboard="Numeric" />
+
+            <Button Text="Guardar"
+                    Command="{Binding GuardarEtapaCommand}"
+                    Margin="0,30,0,0" />
+
+            <Label Text="Etapas registradas" Margin="0,30,0,0" />
+            <CollectionView ItemsSource="{Binding Etapas}" SelectionMode="Single" x:Name="EtapasCollectionView">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Margin="0,5,0,5" Padding="10" BorderColor="{StaticResource Primary}">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding ActividadEtapa}" FontAttributes="Bold"/>
+                                <Label Text="{Binding CantidadEtapa}" />
+                                <Label Text="{Binding MontoTotalEtapa, StringFormat='{}{0:C}'}" />
+                                <Button Text="Registrar Subetapa"
+                                        Command="{Binding Source={x:Reference Name=EtapasCollectionView}, Path=BindingContext.RegistrarSubEtapaCommand}"
+                                        CommandParameter="{Binding .}" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <ActivityIndicator 
+                IsRunning="{Binding IsBusy}" 
+                IsVisible="{Binding IsBusy}" 
+                Color="{StaticResource Primary}" 
+                HorizontalOptions="Center" 
+                VerticalOptions="Center"/>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

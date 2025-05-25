@@ -1,12 +1,13 @@
 ﻿using DelCorp.Views;
 using Supabase.Gotrue;
 using Client = Supabase.Client;
-
+using Microsoft.Maui;
 
 namespace DelCorp.Services;
 
 public class SupabaseAuthService : IAuthService
 {
+    private const string UserIdKey = "LocalUserId";
     private readonly Client _supabaseClient;
     private readonly IConnectivity _connectivity;
 
@@ -14,6 +15,28 @@ public class SupabaseAuthService : IAuthService
     {
         _supabaseClient = supabaseClient;
         _connectivity = connectivity;
+        LoadLocalUserId(); // Intentar cargar el ID al inicializar el servicio
+    }
+
+    private void SaveLocalUserId(string? userId)
+    {
+        if (userId != null)
+        {
+            Preferences.Set(UserIdKey, userId);
+        }
+        else
+        {
+            Preferences.Remove(UserIdKey);
+        }
+    }
+
+    private void LoadLocalUserId()
+    {
+        var localId = Preferences.Get(UserIdKey, (string?)null);
+        if (!string.IsNullOrEmpty(localId) && _supabaseClient.Auth.CurrentUser == null)
+        {
+            System.Diagnostics.Debug.WriteLine($"ID de usuario local cargado: {localId}");
+        }
     }
 
     public async Task<bool> LoginAsync(string email, string password)
@@ -26,7 +49,12 @@ public class SupabaseAuthService : IAuthService
         try
         {
             var response = await _supabaseClient.Auth.SignIn(email, password);
-            return response != null;
+            if (response?.User?.Id != null)
+            {
+                SaveLocalUserId(response.User.Id);
+                return true;
+            }
+            return false;
         }
         catch (Exception ex)
         {
@@ -47,13 +75,18 @@ public class SupabaseAuthService : IAuthService
             var options = new SignUpOptions
             {
                 Data = new Dictionary<string, object>
-                    {
-                        { "name", name }
-                    }
+                {
+                    { "name", name }
+                }
             };
 
             var response = await _supabaseClient.Auth.SignUp(email, password, options);
-            return response != null;
+            if (response?.User?.Id != null)
+            {
+                SaveLocalUserId(response.User.Id);
+                return true;
+            }
+            return false;
         }
         catch (Exception ex)
         {
@@ -86,6 +119,7 @@ public class SupabaseAuthService : IAuthService
         try
         {
             await _supabaseClient.Auth.SignOut();
+            SaveLocalUserId(null); // Limpiar el ID local al cerrar sesión
             return true;
         }
         catch (Exception ex)
@@ -97,7 +131,7 @@ public class SupabaseAuthService : IAuthService
 
     public Task<bool> IsAuthenticatedAsync()
     {
-        return Task.FromResult(_supabaseClient.Auth.CurrentUser != null);
+        return Task.FromResult(_supabaseClient.Auth.CurrentUser != null || !string.IsNullOrEmpty(Preferences.Get(UserIdKey, (string?)null)));
     }
 
     public Task<string?> GetCurrentUserEmail()
@@ -108,58 +142,44 @@ public class SupabaseAuthService : IAuthService
     public async Task<UserProfile> GetCurrentUserProfileAsync()
     {
         var user = _supabaseClient.Auth.CurrentUser;
+        string? localId = Preferences.Get(UserIdKey, (string?)null);
 
-        if (user == null)
-            throw new Exception("No hay usuario autenticado");
+        if (user == null && string.IsNullOrEmpty(localId))
+            throw new Exception("No hay usuario autenticado local o remotamente");
+
+        string userIdToFetch = user?.Id ?? localId!; // Usar el ID del usuario actual si existe, sino el ID local
 
         try
         {
-            // Usar From<UserProfile>() para consultar la tabla "profiles"
             var response = await _supabaseClient
                 .From<UserProfile>()
-                .Where(x => x.Id == user.Id)
+                .Where(x => x.Id == userIdToFetch)
                 .Single();
 
-            // Si no se encuentra perfil, crear uno básico
             return response ?? new UserProfile
             {
-                Id = user.Id,
-                Email = user.Email,
-                Name = user.Email, // Usar email como nombre por defecto
-                CreatedAt = user.CreatedAt
+                Id = userIdToFetch,
+                Email = user?.Email ?? "email_desconocido", // Puedes manejar esto mejor si es necesario
+                Name = user?.Email ?? "nombre_desconocido",
+                CreatedAt = user?.CreatedAt ?? DateTime.UtcNow // O un valor por defecto apropiado
             };
         }
         catch (Exception ex)
         {
-            // Manejo de error si no existe perfil
+            System.Diagnostics.Debug.WriteLine($"Error al obtener el perfil: {ex.Message}");
             return new UserProfile
             {
-                Id = user.Id,
-                Email = user.Email,
-                Name = user.Email,
-                CreatedAt = user.CreatedAt
+                Id = userIdToFetch,
+                Email = user?.Email ?? "email_desconocido",
+                Name = user?.Email ?? "nombre_desconocido",
+                CreatedAt = user?.CreatedAt ?? DateTime.UtcNow
             };
         }
     }
 
-    // Método para verificar si el usuario está autenticado al iniciar la aplicación
-    public async Task<bool> CheckAuthenticationAsync()
+    // Método para verificar si existe un ID de usuario local
+    public Task<bool> CheckAuthenticationAsync()
     {
-        try
-        {
-            // Verificar si hay un usuario actual
-            if (_supabaseClient.Auth.CurrentUser != null)
-            {
-                return true;
-            }
-
-            // Intentar restaurar la sesión si existe
-            var session = await _supabaseClient.Auth.RetrieveSessionAsync();
-            return session != null;
-        }
-        catch
-        {
-            return false;
-        }
+        return Task.FromResult(!string.IsNullOrEmpty(Preferences.Get(UserIdKey, (string?)null)));
     }
 }

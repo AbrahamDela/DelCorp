@@ -65,8 +65,9 @@ public partial class UserProfileViewModel : ObservableObject
             // Cerrar sesión
             await _authService.LogoutAsync();
 
-            // Navegar a la página de login
-            await Shell.Current.GoToAsync("//login");
+            // Crear una instancia de LoginViewModel y pasar las dependencias requeridas
+            var loginViewModel = new LoginViewModel(_authService, _connectivity);
+            Application.Current.MainPage = new Views.LoginPage(loginViewModel);
         }
         catch (Exception ex)
         {

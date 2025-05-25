@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"  
             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"  
             x:Class="DelCorp.Views.RegisterPage"  
-            Title="Crear Cuenta">
+            Title="Registrar Usuario">
 
     <ScrollView>  
        <VerticalStackLayout  
@@ -12,10 +12,9 @@
 
            <!-- Título -->  
            <Label  
-               Text="Crear Cuenta"  
-               FontSize="32"  
-               HorizontalOptions="Center"  
-               TextColor="White"  
+               Text="Registrar Usuario"
+               Style="{StaticResource TitleLarge}"
+               HorizontalOptions="Center"
                FontAttributes="Bold"/>  
 
            <!-- Nombre Completo -->  
@@ -62,33 +61,17 @@
                IsVisible="{Binding ErrorMessage, Converter={StaticResource StringToBoolConverter}}"/>  
 
            <!-- Botón de Registro -->  
-           <Button  
+           <Button
                Text="Registrarse"  
-               Command="{Binding RegisterCommand}"  
-               BackgroundColor="{StaticResource Secondary}"  
-               TextColor="White"  
+               Command="{Binding RegisterCommand}"
                IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"  
                Margin="20,10"/>  
 
-           <!-- Indicador de Carga -->  
-           <ActivityIndicator  
+           <!-- Indicador de Carga -->
+            <ActivityIndicator  
                IsRunning="{Binding IsLoading}"  
                Color="White"  
-               IsVisible="{Binding IsLoading}"/>  
-
-           <!-- Enlace a Iniciar Sesión -->  
-           <HorizontalStackLayout HorizontalOptions="Center">  
-               <Label  
-                   Text="¿Ya tienes una cuenta? "  
-                   TextColor="White"/>  
-               <Label  
-                   Text="Iniciar Sesión"  
-                   TextColor="Yellow">  
-                   <Label.GestureRecognizers>  
-                       <TapGestureRecognizer Command="{Binding NavigateToLoginCommand}"/>  
-                   </Label.GestureRecognizers>  
-               </Label>  
-           </HorizontalStackLayout>  
-       </VerticalStackLayout>  
+               IsVisible="{Binding IsLoading}"/>
+        </VerticalStackLayout>  
    </ScrollView>  
 </ContentPage>

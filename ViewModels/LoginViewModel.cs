@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DelCorp.Services;
+using DelCorp.Models;
+using System.Diagnostics;
 
 namespace DelCorp.ViewModels;
 
@@ -49,43 +51,40 @@ public partial class LoginViewModel : ObservableObject
     [RelayCommand]
     private async Task Login()
     {
-        // Validar campos
-        if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
+        // Validaciones iniciales
+        if (string.IsNullOrWhiteSpace(Email))
         {
-            ErrorMessage = "Por favor, ingrese correo y contraseña";
-            IsForgotPasswordVisible = false;
+            ErrorMessage = "Por favor, ingrese su correo electrónico";
             return;
         }
 
-        // Verificar conexión a internet
-        if (_connectivity.NetworkAccess != NetworkAccess.Internet)
+        if (string.IsNullOrWhiteSpace(Password))
         {
-            ErrorMessage = "No hay conexión a internet";
-            IsForgotPasswordVisible = false;
+            ErrorMessage = "Por favor, ingrese su contraseña";
             return;
         }
 
         try
         {
-            IsLoading = true;
+            // Restablecer estado de error
             ErrorMessage = string.Empty;
-            IsForgotPasswordVisible = false;
+            IsLoading = true;
 
-            // Intentar iniciar sesión
-            var result = await _authService.LoginAsync(Email, Password);
+            // Verificar conectividad
+            bool hasInternet = _connectivity.NetworkAccess == NetworkAccess.Internet;
 
-            if (result)
+            // Intentar login
+            var loginResult = await PerformLogin(hasInternet);
+
+            if (loginResult)
             {
-                // Navegar a la página principal
-                Application.Current.MainPage = new AppShell();
-            }
-            else
-            {
-                HandleLoginError();
+                // Navegación a página principal
+                await NavigateToMainPage();
             }
         }
         catch (Exception ex)
         {
+            // Diagnóstico detallado de errores
             HandleLoginError(ex);
         }
         finally
@@ -94,116 +93,94 @@ public partial class LoginViewModel : ObservableObject
         }
     }
 
-    private void HandleLoginError(Exception ex = null)
+    private async Task<bool> PerformLogin(bool hasInternet)
     {
-        // Diagnostico detallado del error
-        if (ex != null)
-        {
-            // Imprime todos los detalles del error
-            System.Diagnostics.Debug.WriteLine($"Login Error - Type: {ex.GetType().Name}");
-            System.Diagnostics.Debug.WriteLine($"Error Message: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"Full Exception: {ex}");
-
-            // Si es una excepción de HttpRequestException, intenta obtener más detalles
-            if (ex is HttpRequestException httpEx)
-            {
-                System.Diagnostics.Debug.WriteLine($"HTTP Error Details: {httpEx.StatusCode}");
-            }
-        }
-
-        // Mensajes de error más detallados
-        string errorMessage = "Error al iniciar sesión";
-
         try
         {
-            // Intentar parsear el mensaje de error como JSON
-            var errorDetails = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(ex.Message);
 
-            if (errorDetails != null)
+            if (!hasInternet)
             {
-                // Revisar si hay claves específicas en el error
-                if (errorDetails.TryGetValue("msg", out var msg))
-                {
-                    errorMessage = msg.ToString();
-                }
-                else if (errorDetails.TryGetValue("message", out var message))
-                {
-                    errorMessage = message.ToString();
-                }
+                ErrorMessage = "Se requiere conexión a internet para iniciar sesión";
+                return false;
             }
+
+            // Intentar login
+            var result = await _authService.LoginAsync(Email, Password);
+
+            Debug.WriteLine($"Login Result: {result}");
+
+            return result;
         }
-        catch
+        catch (Exception ex)
         {
-            // Si la deserialización falla, usar el mensaje original
-            if (ex != null)
+            // Loguear error detallado
+            Debug.WriteLine($"Login Error: {ex.Message}");
+            Debug.WriteLine($"Full Exception: {ex}");
+            throw;
+        }
+    }
+
+    private async Task NavigateToMainPage()
+    {
+        try
+        {
+            // Navegación segura
+            MainThread.BeginInvokeOnMainThread(() =>
             {
-                // Revisar diferentes escenarios de error
-                if (ex.Message.Contains("Invalid login credentials"))
-                {
-                    errorMessage = "Correo o contraseña incorrectos";
-                }
-                else if (ex.Message.Contains("400"))
-                {
-                    errorMessage = "Solicitud inválida. Verifique sus credenciales.";
-                }
-                else if (ex.Message.Contains("401"))
-                {
-                    errorMessage = "No autorizado. Credenciales incorrectas.";
-                }
-                else if (ex.Message.Contains("network"))
-                {
-                    errorMessage = "Error de conexión. Verifique su red.";
-                }
-            }
+                Application.Current.MainPage = new AppShell();
+            });
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Error al navegar a la página principal";
+        }
+    }
+
+    private void HandleLoginError(Exception ex)
+    {
+        // Diagnóstico detallado de errores
+        Debug.WriteLine($"Login Error Type: {ex.GetType().Name}");
+        Debug.WriteLine($"Error Message: {ex.Message}");
+        Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
+
+        // Mensajes de error específicos
+        string errorMessage = "Error al iniciar sesión";
+
+        if (ex.Message.Contains("Invalid login credentials"))
+        {
+            errorMessage = "Correo o contraseña incorrectos";
+        }
+        else if (ex.Message.Contains("Network is unreachable"))
+        {
+            errorMessage = "No hay conexión a internet";
+        }
+        else if (ex.Message.Contains("No hay usuario local registrado"))
+        {
+            errorMessage = "Requiere conexión a internet para el primer inicio de sesión";
         }
 
+        // Mostrar mensaje de error
         ErrorMessage = errorMessage;
-        IsForgotPasswordVisible = true;
     }
 
     [RelayCommand]
-    private async Task ForgotPassword()
+    private async Task OnAppearing()
     {
-        if (string.IsNullOrWhiteSpace(Email))
-        {
-            ErrorMessage = "Por favor, ingrese su correo electrónico";
-            return;
-        }
-
         try
         {
-            IsLoading = true;
-            ErrorMessage = string.Empty;
+            // Verificar autenticación al aparecer la página
+            bool isAuthenticated = await _authService.CheckAuthenticationAsync();
 
-            var result = await _authService.SendPasswordResetAsync(Email);
+            Debug.WriteLine($"Authentication Check: {isAuthenticated}");
 
-            if (result)
+            if (isAuthenticated)
             {
-                await Shell.Current.DisplayAlert(
-                    "Recuperar Contraseña",
-                    "Se ha enviado un enlace de recuperación a su correo",
-                    "OK"
-                );
-                IsForgotPasswordVisible = false;
-            }
-            else
-            {
-                ErrorMessage = "No se pudo enviar el correo de recuperación";
+                await NavigateToMainPage();
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            Debug.WriteLine($"Authentication Check Error: {ex.Message}");
         }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task NavigateToRegister()
-    {
-        await Shell.Current.GoToAsync("//register");
     }
 }

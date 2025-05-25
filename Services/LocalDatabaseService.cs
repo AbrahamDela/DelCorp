@@ -14,24 +14,9 @@ public class LocalDatabaseService : IDisposable
 
         // Crear tablas necesarias
         _database.CreateTableAsync<LocalProject>().Wait();
-        _database.CreateTableAsync<LocalSession>().Wait();
-    }
-
-    // Métodos para manejar sesiones
-    public async Task<LocalSession> GetActiveSessionAsync()
-    {
-        return await _database.Table<LocalSession>()
-            .Where(s => s.IsActive)
-            .FirstOrDefaultAsync();
-    }
-
-    public async Task<int> SaveSessionAsync(LocalSession session)
-    {
-        // Invalidar sesiones anteriores
-        await _database.ExecuteAsync("UPDATE Sessions SET IsActive = 0");
-
-        // Guardar nueva sesión
-        return await _database.InsertAsync(session);
+        _database.CreateTableAsync<LocalPresupuesto>().Wait();
+        _database.CreateTableAsync<LocalEtapa>().Wait();
+        _database.CreateTableAsync<LocalSubEtapa>();
     }
 
     public async Task ClearSessionAsync()
@@ -113,8 +98,100 @@ public class LocalDatabaseService : IDisposable
         return await _database.UpdateAsync(project);
     }
 
+    public async Task<List<LocalPresupuesto>> GetPresupuestosByProjectIdAsync(int projectId)
+    {
+        return await _database.Table<LocalPresupuesto>()
+            .Where(p => p.IdProyecto == projectId)
+            .ToListAsync();
+    }
+
+    public async Task<LocalPresupuesto> GetPresupuestoByServerIdAsync(long serverId)
+    {
+        return await _database.Table<LocalPresupuesto>()
+            .FirstOrDefaultAsync(p => p.ServerId == serverId);
+    }
+
+    public async Task SavePresupuestoAsync(LocalPresupuesto presupuesto)
+    {
+        await _database.InsertAsync(presupuesto);
+    }
+
     public void Dispose()
     {
         _database?.CloseAsync().Wait();
+    }
+
+
+    //Etapas de presupuesto
+    // Métodos para etapas
+    public async Task<List<LocalEtapa>> GetEtapasByPresupuestoIdAsync(long presupuestoId)
+    {
+        System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoIdAsync] Retornar etapas localmente del presupuesto ID: {presupuestoId}");
+        return await _database.Table<LocalEtapa>()
+            .Where(e => e.IdPresupuesto == presupuestoId)
+            .ToListAsync();
+    }
+
+    public async Task<LocalEtapa> GetEtapaByIdAsync(long etapaId)
+    {
+        return await _database.Table<LocalEtapa>()
+            .FirstOrDefaultAsync(e => e.Id == etapaId);
+    }
+
+    public async Task<LocalEtapa> GetEtapaByServerIdAsync(long serverId)
+    {
+        return await _database.Table<LocalEtapa>()
+            .FirstOrDefaultAsync(e => e.ServerId == serverId);
+    }
+
+    public async Task SaveEtapaAsync(LocalEtapa etapa)
+    {
+        await _database.InsertAsync(etapa);
+    }
+
+    public async Task DeleteEtapaAsync(LocalEtapa etapa)
+    {
+        await _database.DeleteAsync(etapa);
+    }
+
+    public async Task DeleteEtapasByPresupuestoIdAsync(long presupuestoId)
+    {
+        var etapasToDelete = await _database.Table<LocalEtapa>()
+            .Where(e => e.IdPresupuesto == presupuestoId)
+            .ToListAsync();
+
+        foreach (var etapa in etapasToDelete)
+        {
+            await _database.DeleteAsync(etapa);
+        }
+    }
+
+    public async Task<List<LocalPresupuesto>> GetAllPresupuestosAsync()
+    {
+        return await _database.Table<LocalPresupuesto>().ToListAsync();
+    }
+
+    public async Task DeletePresupuestoAsync(LocalPresupuesto presupuesto)
+    {
+        if (presupuesto == null)
+            return;
+
+        await _database.DeleteAsync(presupuesto);
+    }
+
+    public async Task<List<LocalSubEtapa>> GetSubEtapasByEtapaIdAsync(long etapaId)
+    {
+        System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaIdAsync] Retornar Sub Etapas localmente de la etapa ID: {etapaId}");
+        return await _database.Table<LocalSubEtapa>().Where(x => x.IdEtapa == etapaId).ToListAsync();
+    }
+
+    public async Task SaveSubEtapaAsync(LocalSubEtapa subEtapa)
+    {
+        await _database.UpdateAsync(subEtapa);
+    }
+
+    public async Task DeleteSubEtapasByEtapaIdAsync(long etapaId)
+    {
+        await _database.Table<LocalSubEtapa>().Where(x => x.IdEtapa == etapaId).DeleteAsync();
     }
 }
