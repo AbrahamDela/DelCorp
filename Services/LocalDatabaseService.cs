@@ -17,6 +17,10 @@ public class LocalDatabaseService : IDisposable
         _database.CreateTableAsync<LocalPresupuesto>().Wait();
         _database.CreateTableAsync<LocalEtapa>().Wait();
         _database.CreateTableAsync<LocalSubEtapa>();
+        _database.CreateTableAsync<LocalCategoriaRec>().Wait();
+_database.CreateTableAsync<LocalUniMedRe>().Wait();
+_database.CreateTableAsync<LocalRecurso>().Wait();
+_database.CreateTableAsync<LocalRecursoUti>().Wait();
     }
 
     public async Task ClearSessionAsync()
@@ -188,7 +192,6 @@ public class LocalDatabaseService : IDisposable
     public async Task SaveSubEtapaAsync(LocalSubEtapa subEtapa)
     {
         await _database.InsertAsync(subEtapa);
-        System.Diagnostics.Debug.WriteLine($"[LocalDatabaseService.SaveSubEtapaAsync] Attempted InsertAsync for SubEtapa with Id: {subEtapa.Id}, EtapaId: {subEtapa.IdEtapa}");
     }
 
     public async Task DeleteSubEtapasByEtapaIdAsync(long etapaId)
@@ -202,4 +205,130 @@ public class LocalDatabaseService : IDisposable
         }
         System.Diagnostics.Debug.WriteLine($"[LocalDatabaseService.DeleteSubEtapasByEtapaIdAsync] Deleted {countDeleted} subetapas for EtapaId: {etapaId}");
     }
+
+    // CategoriaRec
+    public async Task<List<LocalCategoriaRec>> GetCategoriasRecAsync() => await _database.Table<LocalCategoriaRec>().ToListAsync();
+
+    public async Task SaveCategoriaRecAsync(LocalCategoriaRec item)
+    {
+        var existing = await _database.Table<LocalCategoriaRec>().FirstOrDefaultAsync(x => x.ServerId == item.ServerId);
+        if (existing != null)
+        {
+            item.LocalId = existing.LocalId; // Preserve local PK
+            await _database.UpdateAsync(item);
+        }
+        else
+        {
+            item.LocalId = 0; // Ensure new local PK for insert
+            await _database.InsertAsync(item);
+        }
+    }
+    public async Task ClearCategoriasRecAsync() => await _database.DeleteAllAsync<LocalCategoriaRec>();
+
+
+    // UniMedRe
+    public async Task<List<LocalUniMedRe>> GetUniMedReAsync() => await _database.Table<LocalUniMedRe>().ToListAsync();
+
+    public async Task SaveUniMedReAsync(LocalUniMedRe item)
+    {
+        var existing = await _database.Table<LocalUniMedRe>().FirstOrDefaultAsync(x => x.ServerId == item.ServerId);
+        if (existing != null)
+        {
+            item.LocalId = existing.LocalId; // Preserve local PK
+            await _database.UpdateAsync(item);
+        }
+        else
+        {
+            item.LocalId = 0; // Ensure new local PK for insert
+            await _database.InsertAsync(item);
+        }
+    }
+    public async Task ClearUniMedReAsync() => await _database.DeleteAllAsync<LocalUniMedRe>();
+
+
+    // Recurso
+    public async Task<List<LocalRecurso>> GetRecursosAsync(long? idCategoriaRec = null)
+    {
+        var query = _database.Table<LocalRecurso>();
+        if (idCategoriaRec.HasValue)
+        {
+            query = query.Where(r => r.IdCatRec == idCategoriaRec.Value);
+        }
+        return await query.ToListAsync();
+    }
+
+    public async Task SaveRecursoAsync(LocalRecurso item)
+    {
+        var existing = await _database.Table<LocalRecurso>().FirstOrDefaultAsync(x => x.ServerId == item.ServerId);
+        if (existing != null)
+        {
+            item.LocalId = existing.LocalId; // Preserve local PK
+            await _database.UpdateAsync(item);
+        }
+        else
+        {
+            item.LocalId = 0; // Ensure new local PK for insert
+            await _database.InsertAsync(item);
+        }
+    }
+    public async Task ClearRecursosAsync(long? idCategoriaRec = null)
+    {
+        if (idCategoriaRec.HasValue)
+        {
+            var itemsToDelete = await _database.Table<LocalRecurso>().Where(r => r.IdCatRec == idCategoriaRec.Value).ToListAsync();
+            foreach (var item in itemsToDelete) await _database.DeleteAsync(item);
+        }
+        else
+        {
+            await _database.DeleteAllAsync<LocalRecurso>();
+        }
+    }
+
+
+    // RecursoUti
+    public async Task<List<LocalRecursoUti>> GetRecursosUtiBySubEtapaIdAsync(long subEtapaId) =>
+        await _database.Table<LocalRecursoUti>().Where(r => r.IdSubEtapa == subEtapaId).ToListAsync();
+
+    public async Task<LocalRecursoUti> GetLocalRecursoUtiByServerIdAsync(long serverId) =>
+        await _database.Table<LocalRecursoUti>().FirstOrDefaultAsync(r => r.ServerId == serverId);
+
+    public async Task<LocalRecursoUti> GetLocalRecursoUtiByLocalIdAsync(long localId) =>
+        await _database.Table<LocalRecursoUti>().FirstOrDefaultAsync(r => r.LocalId == localId);
+
+
+    public async Task SaveRecursoUtiAsync(LocalRecursoUti item)
+    {
+        if (item.LocalId != 0)
+        {
+            await _database.UpdateAsync(item);
+        }
+        else if (item.ServerId.HasValue)
+        {
+            var existingByServer = await GetLocalRecursoUtiByServerIdAsync(item.ServerId.Value);
+            if (existingByServer != null)
+            {
+                item.LocalId = existingByServer.LocalId;
+                await _database.UpdateAsync(item);
+            }
+            else
+            {
+                item.LocalId = 0; // Ensure new LocalId for insert
+                await _database.InsertAsync(item);
+            }
+        }
+        else
+        {
+            item.LocalId = 0; // Ensure new LocalId for insert
+            await _database.InsertAsync(item);
+        }
+    }
+
+    public async Task DeleteRecursoUtiByLocalIdAsync(long localId)
+    {
+        var itemByLocalId = await _database.Table<LocalRecursoUti>().FirstOrDefaultAsync(x => x.LocalId == localId);
+        if (itemByLocalId != null) await _database.DeleteAsync(itemByLocalId);
+    }
+
+    public async Task<List<LocalRecursoUti>> GetUnsyncedRecursosUtiAsync() =>
+        await _database.Table<LocalRecursoUti>().Where(r => !r.IsSynced).ToListAsync();
 }

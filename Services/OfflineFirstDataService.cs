@@ -837,45 +837,52 @@ namespace DelCorp.Services
             }
         }
 
-        public async Task SaveSubEtapa(SubEtapa subEtapa)
+        public async Task SaveSubEtapa(SubEtapa subEtapaDto) // El DTO viene del ViewModel
         {
-            System.Diagnostics.Debug.WriteLine("Iniciando SaveSubEtapa...");
+            System.Diagnostics.Debug.WriteLine($"Iniciando SaveSubEtapa para DTO Id: {subEtapaDto.Id}");
+            subEtapaDto.CreatedAt = DateTime.UtcNow; // Asegurar CreatedAt
 
-            // Guardar localmente
-            System.Diagnostics.Debug.WriteLine("Convirtiendo subEtapa a modelo local.");
-            var local = subEtapa.ToLocal();
+            var local = subEtapaDto.ToLocal();
+            local.IsSynced = false; // Marcar como no sincronizado inicialmente
 
-            System.Diagnostics.Debug.WriteLine($"Guardando subEtapa localmente: {local}");
-            await _localDatabase.SaveSubEtapaAsync(local);
-            System.Diagnostics.Debug.WriteLine("SubEtapa guardada localmente.");
+            await _localDatabase.SaveSubEtapaAsync(local); // Guarda/Actualiza localmente. Genera LocalId si es nuevo.
+            System.Diagnostics.Debug.WriteLine($"SubEtapa guardada/actualizada localmente. LocalId: {local.Id}, ServerId: {local.ServerId}");
 
-            // Si hay conexión, sincronizar con Supabase
-            System.Diagnostics.Debug.WriteLine($"Estado de conexión: {_connectivity.NetworkAccess}");
             if (_connectivity.NetworkAccess == NetworkAccess.Internet)
             {
                 try
                 {
-                    System.Diagnostics.Debug.WriteLine("Conectado a Internet. Iniciando sincronización con Supabase...");
-                    var supabaseModel = subEtapa.ToSupabase();
+                    System.Diagnostics.Debug.WriteLine("Conectado. Intentando sincronizar SubEtapa con Supabase...");
+                    SupabaseSubEtapa supabaseModel = subEtapaDto.ToSupabase();
 
-                    System.Diagnostics.Debug.WriteLine($"Upsert en Supabase con modelo: {supabaseModel}");
-                    var response = await _supabaseClient.From<SupabaseSubEtapa>().Upsert(supabaseModel);
-                    System.Diagnostics.Debug.WriteLine("Respuesta de Supabase recibida.");
-
-                    var synced = response.Models.FirstOrDefault();
-                    if (synced != null)
+                    if (!local.ServerId.HasValue || local.ServerId == 0) // Indica que es un nuevo ítem para Supabase
                     {
-                        System.Diagnostics.Debug.WriteLine($"Sincronización exitosa. ID sincronizado: {synced.Id}");
-
-                        // Actualiza el ID local si es necesario
-                        local.Id = synced.Id;
-                        System.Diagnostics.Debug.WriteLine($"Actualizando ID local a: {local.Id}");
-                        await _localDatabase.SaveSubEtapaAsync(local);
-                        System.Diagnostics.Debug.WriteLine("ID local actualizado tras la sincronización.");
+                        supabaseModel.Id = default(long);
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine("Sincronización con Supabase no devolvió ningún modelo.");
+                        supabaseModel.Id = local.ServerId.Value; // Actualiza usando el ServerId existente
+                    }
+
+                    var response = await _supabaseClient.From<SupabaseSubEtapa>().Upsert(supabaseModel);
+                    var synced = response.Models.FirstOrDefault();
+
+                    if (synced != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Sincronización de SubEtapa exitosa. ServerId obtenido: {synced.Id}");
+                        local.ServerId = synced.Id; // ¡Importante! Actualiza el ServerId del registro local.
+                        local.CreatedAt = synced.CreatedAt; // Actualiza CreatedAt desde el servidor si es necesario.
+                        local.IsSynced = true;
+                        await _localDatabase.SaveSubEtapaAsync(local); // Vuelve a guardar el registro local con el ServerId y estado sincronizado.
+                        System.Diagnostics.Debug.WriteLine($"Registro local de SubEtapa actualizado con ServerId: {local.ServerId}, LocalId: {local.Id}");
+
+                        // Actualiza el DTO original con el ServerId (y potencialmente otros campos del servidor)
+                        subEtapaDto.Id = synced.Id;
+                        subEtapaDto.CreatedAt = synced.CreatedAt;
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("Sincronización de SubEtapa con Supabase no devolvió ningún modelo.");
                     }
                 }
                 catch (Exception ex)
@@ -884,14 +891,365 @@ namespace DelCorp.Services
                     _logger?.LogError(msg);
                     System.Diagnostics.Debug.WriteLine(msg);
                     System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+                    // local.IsSynced permanece false.
                 }
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("No hay conexión a Internet. Sincronización omitida.");
+                System.Diagnostics.Debug.WriteLine("No hay conexión a Internet. Sincronización de SubEtapa omitida.");
             }
-
             System.Diagnostics.Debug.WriteLine("Finalizando SaveSubEtapa.");
+        }
+
+        // CategoriaRec
+        public async Task<IEnumerable<CategoriaRec>> GetCategoriasRecAsync()
+        {
+            try
+            {
+                // var localItems = await _localDatabase.GetCategoriasRecAsync();
+                // For now, let's assume GetCategoriasRecAsync exists in LocalDatabaseService
+                // If not, you need to add: public async Task<List<LocalCategoriaRec>> GetCategoriasRecAsync() => await _database.Table<LocalCategoriaRec>().ToListAsync();
+                var localItems = await _localDatabase.GetCategoriasRecAsync();
+                var dtos = localItems.ToDtoList();
+
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    var response = await _supabaseClient.From<SupabaseCategoriaRec>().Get();
+                    var remoteItems = response.Models.ToDtoList(); // Using mapper
+
+                    // Simple sync: clear local and repopulate from server
+                    // More advanced sync would involve comparing timestamps or versions.
+                    // await _localDatabase.ClearCategoriasRecAsync(); // Requires this method in LocalDatabaseService
+                    // For now, let's just replace the DTO list and save to local
+                    dtos = remoteItems;
+                    foreach (var dto in dtos)
+                    {
+                        // Assuming SaveCategoriaRecAsync in LocalDatabaseService handles InsertOrUpdate based on ServerId
+                        await _localDatabase.SaveCategoriaRecAsync(dto.ToLocal(isSynced: true));
+                    }
+                }
+                return dtos.OrderBy(c => c.NombreCatRec);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting CategoriasRec.");
+                return Enumerable.Empty<CategoriaRec>();
+            }
+        }
+
+        public async Task SaveCategoriaRecAsync(CategoriaRec categoria)
+        {
+            // This is likely an admin function not fully implemented for offline first from client.
+            // For now, just a pass-through if online.
+            _logger.LogInformation("SaveCategoriaRecAsync called. This is primarily an admin function.");
+            if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+            {
+                await _supabaseClient.From<SupabaseCategoriaRec>().Upsert(categoria.ToSupabase());
+            }
+            else
+            {
+                // Optionally save locally as unsynced if modification from client is a feature
+                var local = categoria.ToLocal(isSynced: false);
+                await _localDatabase.SaveCategoriaRecAsync(local);
+            }
+        }
+
+        // UniMedRe
+        public async Task<IEnumerable<UniMedRe>> GetUniMedReAsync()
+        {
+            try
+            {
+                var localItems = await _localDatabase.GetUniMedReAsync();
+                var dtos = localItems.ToDtoList();
+
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    var response = await _supabaseClient.From<SupabaseUniMedRe>().Get();
+                    var remoteItems = response.Models.ToDtoList();
+
+                    dtos = remoteItems;
+                    foreach (var dto in dtos)
+                    {
+                        await _localDatabase.SaveUniMedReAsync(dto.ToLocal(isSynced: true));
+                    }
+                }
+                return dtos.OrderBy(u => u.NombreUniMedRe);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting UniMedRe.");
+                return Enumerable.Empty<UniMedRe>();
+            }
+        }
+
+        public async Task SaveUniMedReAsync(UniMedRe uniMedRe)
+        {
+            _logger.LogInformation("SaveUniMedReAsync called. This is primarily an admin function.");
+            if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+            {
+                await _supabaseClient.From<SupabaseUniMedRe>().Upsert(uniMedRe.ToSupabase());
+            }
+            else
+            {
+                var local = uniMedRe.ToLocal(isSynced: false);
+                await _localDatabase.SaveUniMedReAsync(local);
+            }
+        }
+
+        // Recurso
+        public async Task<IEnumerable<Recurso>> GetRecursosAsync(long? idCategoriaRec = null)
+        {
+            try
+            {
+                var localItems = await _localDatabase.GetRecursosAsync(idCategoriaRec);
+                var dtos = localItems.ToDtoList();
+
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    var query = _supabaseClient.From<SupabaseRecurso>();
+                    if (idCategoriaRec.HasValue)
+                    {
+                        query = (Supabase.Interfaces.ISupabaseTable<SupabaseRecurso, Supabase.Realtime.RealtimeChannel>)query.Filter("id_cat_rec", Postgrest.Constants.Operator.Equals, idCategoriaRec.Value.ToString());
+                    }
+                    var response = await query.Get();
+                    var remoteItems = response.Models.ToDtoList();
+
+                    dtos = remoteItems; // Simple overwrite for now
+                    // Clear local for this category or all if no category specified
+                    // await _localDatabase.ClearRecursosAsync(idCategoriaRec); 
+                    foreach (var dto in dtos)
+                    {
+                        await _localDatabase.SaveRecursoAsync(dto.ToLocal(isSynced: true));
+                    }
+                }
+
+                // Populate CategoriaRec name for display convenience
+                var categorias = await GetCategoriasRecAsync();
+                foreach (var recurso in dtos)
+                {
+                    if (recurso.IdCatRec.HasValue)
+                    {
+                        recurso.CategoriaRec = categorias.FirstOrDefault(c => c.Id == recurso.IdCatRec.Value);
+                    }
+                }
+                return dtos.OrderBy(r => r.NombreRecurso);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting Recursos (category: {idCategoriaRec}).");
+                return Enumerable.Empty<Recurso>();
+            }
+        }
+
+        public async Task SaveRecursoAsync(Recurso recurso)
+        {
+            _logger.LogInformation("SaveRecursoAsync called. This is primarily an admin function.");
+            if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+            {
+                await _supabaseClient.From<SupabaseRecurso>().Upsert(recurso.ToSupabase());
+            }
+            else
+            {
+                var local = recurso.ToLocal(isSynced: false);
+                await _localDatabase.SaveRecursoAsync(local);
+            }
+        }
+
+        // RecursoUti (from previous detailed generation, ensure it's complete)
+        public async Task<IEnumerable<RecursoUti>> GetRecursosUtiBySubEtapaIdAsync(long subEtapaId)
+        {
+            try
+            {
+                await SyncRecursosUtiAsync(); // Sync pending local changes first
+
+                var localItems = await _localDatabase.GetRecursosUtiBySubEtapaIdAsync(subEtapaId);
+                var dtos = localItems.Select(l => RecursosMapper.ToDto(l)).ToList(); // Use explicit mapper call
+
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    var response = await _supabaseClient.From<SupabaseRecursoUti>()
+                                                    .Filter("id_sub_etapa", Postgrest.Constants.Operator.Equals, subEtapaId.ToString())
+                                                    .Get();
+                    var remoteSupabaseItems = response.Models;
+
+                    // Sync logic:
+                    // 1. Get all local ServerIds for this subEtapa
+                    var localServerIds = localItems.Where(l => l.ServerId.HasValue).Select(l => l.ServerId.Value).ToHashSet();
+                    // 2. Keep track of ServerIds from remote to find items to delete locally (if server is source of truth)
+                    var remoteServerIds = new HashSet<long>();
+
+                    foreach (var remoteSupabase in remoteSupabaseItems)
+                    {
+                        var remoteDto = RecursosMapper.ToDto(remoteSupabase); // Use explicit mapper call
+                        remoteServerIds.Add(remoteDto.Id);
+                        var existingLocal = await _localDatabase.GetLocalRecursoUtiByServerIdAsync(remoteDto.Id);
+
+                        if (existingLocal == null) // New item from server
+                        {
+                            var newLocal = RecursosMapper.ToLocal(remoteDto, isSynced: true); // Use explicit mapper call
+                            newLocal.LocalId = 0;
+                            await _localDatabase.SaveRecursoUtiAsync(newLocal);
+                        }
+                        // Assuming server is truth, if local item has IsSynced = true and differs, update it
+                        // This simple example doesn't handle complex conflict resolution (e.g. last-write-wins based on a timestamp)
+                        else if (existingLocal.IsSynced && remoteDto.CreatedAt > existingLocal.CreatedAt) // Simple check: if server version is newer
+                        {
+                            var updatedLocal = RecursosMapper.ToLocal(remoteDto, isSynced: true); // Use explicit mapper call
+                            updatedLocal.LocalId = existingLocal.LocalId;
+                            await _localDatabase.SaveRecursoUtiAsync(updatedLocal);
+                        }
+                    }
+                    // Example: Delete local items that are synced but no longer on the server for this subEtapa
+                    var itemsToDeleteLocally = localItems.Where(l => l.IsSynced && l.ServerId.HasValue && !remoteServerIds.Contains(l.ServerId.Value)).ToList();
+                    foreach (var itemToDel in itemsToDeleteLocally)
+                    {
+                        await _localDatabase.DeleteRecursoUtiByLocalIdAsync(itemToDel.LocalId); // Need DeleteRecursoUtiByLocalIdAsync
+                    }
+
+
+                    // Re-fetch from local to get a consistent merged view
+                    localItems = await _localDatabase.GetRecursosUtiBySubEtapaIdAsync(subEtapaId);
+                    dtos = localItems.Select(l => RecursosMapper.ToDto(l)).ToList(); // Use explicit mapper call
+                }
+
+                // Populate navigation properties
+                var allRecursos = await GetRecursosAsync(); // Asegúrate que esto devuelva todos los recursos necesarios.
+                var allUniMedRe = await GetUniMedReAsync(); // Asegúrate que esto devuelva todas las unidades necesarias.
+
+                foreach (var dto in dtos)
+                {
+                    if (dto.IdRecurso.HasValue)
+                        dto.Recurso = allRecursos.FirstOrDefault(r => r.Id == dto.IdRecurso.Value);
+                    if (dto.IdUniMedRe.HasValue)
+                        dto.UniMedRe = allUniMedRe.FirstOrDefault(u => u.Id == dto.IdUniMedRe.Value);
+                    // Si dto.Recurso o dto.UniMedRe son null aquí, los nombres no aparecerán en la UI.
+                }
+                return dtos.OrderByDescending(r => r.CreatedAt);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting RecursosUti for SubEtapaId {subEtapaId}.");
+                return Enumerable.Empty<RecursoUti>();
+            }
+        }
+
+        public async Task<RecursoUti> SaveRecursoUtiAsync(RecursoUti recursoUti)
+        {
+            try
+            {
+                recursoUti.CreatedAt = DateTime.UtcNow;
+                if (recursoUti.CantidadRecursosUti.HasValue && recursoUti.PrecioUniRecursosUti.HasValue)
+                {
+                    recursoUti.TotalRecursosUti = recursoUti.CantidadRecursosUti * recursoUti.PrecioUniRecursosUti;
+                }
+
+                var local = RecursosMapper.ToLocal(recursoUti, isSynced: false); // Use explicit mapper call
+
+                // Ensure LocalId is 0 if it's a brand new record, so SQLite auto-increments.
+                // If recursoUti.Id contains a ServerId for an existing record, ToLocal should map it to local.ServerId.
+                if (recursoUti.Id == 0) local.LocalId = 0; // If DTO Id is 0, it's new
+
+
+                await _localDatabase.SaveRecursoUtiAsync(local);
+                recursoUti.Id = local.ServerId ?? local.LocalId;
+
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    var supabaseModel = RecursosMapper.ToSupabase(recursoUti); // Use explicit mapper call
+                    // If it's a new item for Supabase (local.ServerId was null), SupabaseRecursoUti.Id should be default
+                    if (local.ServerId == null) supabaseModel.Id = default;
+                    else supabaseModel.Id = local.ServerId.Value;
+
+
+                    var response = await _supabaseClient.From<SupabaseRecursoUti>().Upsert(supabaseModel);
+                    var synced = response.Models.FirstOrDefault();
+                    if (synced != null)
+                    {
+                        var syncedDto = RecursosMapper.ToDto(synced); // Use explicit mapper call
+                        local.ServerId = syncedDto.Id;
+                        local.IsSynced = true;
+                        // Update other fields from syncedDto if necessary (e.g. server-generated CreatedAt)
+                        local.CreatedAt = syncedDto.CreatedAt;
+                        await _localDatabase.SaveRecursoUtiAsync(local);
+                        return syncedDto; // Return the DTO from server response
+                    }
+                }
+                // If offline, or sync failed, return the DTO based on local data
+                // The DTO's ID should reflect the local ID if it hasn't been synced yet.
+                recursoUti.Id = local.LocalId; // Make sure DTO Id is local if not synced
+                return recursoUti;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving RecursoUti.");
+                throw;
+            }
+        }
+
+        public async Task DeleteRecursoUtiAsync(long recursoUtiId) // This Id is likely the DTO's Id (ServerId if synced, LocalId if not)
+        {
+            try
+            {
+                // Try to find by ServerId first, then by LocalId
+                var localItem = await _localDatabase.GetLocalRecursoUtiByServerIdAsync(recursoUtiId) ?? await _localDatabase.GetLocalRecursoUtiByLocalIdAsync(recursoUtiId);
+
+                if (localItem != null)
+                {
+                    await _localDatabase.DeleteRecursoUtiByLocalIdAsync(localItem.LocalId); // Use local PK for deletion
+
+                    if (_connectivity.NetworkAccess == NetworkAccess.Internet && localItem.ServerId.HasValue)
+                    {
+                        await _supabaseClient.From<SupabaseRecursoUti>()
+                                             .Filter("id", Postgrest.Constants.Operator.Equals, localItem.ServerId.Value)
+                                             .Delete();
+                    }
+                    // If offline & had ServerId, should mark for server deletion on next sync
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error deleting RecursoUti {recursoUtiId}.");
+            }
+        }
+
+        public async Task SyncRecursosUtiAsync() //
+        {
+            if (_connectivity.NetworkAccess != NetworkAccess.Internet) return; //
+
+            var unsyncedItems = await _localDatabase.GetUnsyncedRecursosUtiAsync(); //
+            foreach (var localItem in unsyncedItems) //
+            {
+                try
+                {
+                    var dto = RecursosMapper.ToDto(localItem); // Use explicit mapper call
+                    var supabaseModel = RecursosMapper.ToSupabase(dto); // Use explicit mapper call
+
+                    // If localItem.ServerId is null, it's a new item, Supabase should generate Id
+                    // If localItem.ServerId has value, it's an update to existing server item
+                    if (localItem.ServerId == null)
+                    {
+                        supabaseModel.Id = default; // Let Supabase assign ID
+                    }
+                    else
+                    {
+                        supabaseModel.Id = localItem.ServerId.Value;
+                    }
+
+                    var response = await _supabaseClient.From<SupabaseRecursoUti>().Upsert(supabaseModel); //
+                    var synced = response.Models.FirstOrDefault(); //
+                    if (synced != null) //
+                    {
+                        localItem.ServerId = synced.Id; //
+                        localItem.IsSynced = true; //
+                        localItem.CreatedAt = synced.CreatedAt; // Update CreatedAt from server
+                        await _localDatabase.SaveRecursoUtiAsync(localItem);
+                    }
+                }
+                catch (Exception ex) //
+                {
+                    _logger.LogError(ex, $"Failed to sync RecursoUti with LocalId {localItem.LocalId}."); //
+                }
+            }
         }
     }
 }

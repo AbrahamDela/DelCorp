@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using DelCorp.Models;
 using DelCorp.Services;
+using DelCorp.Views; // Required for nameof(RegistrarRecursoUtiPage)
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 
@@ -55,21 +56,31 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         IsBusy = true;
         try
         {
+            long id = OfflineFirstDataService.GenerarIdAleatorio(); // Generar ID aleatorio
+
             var subEtapa = new SubEtapa
             {
+                Id = id, //Metodo de ultimo recurso ya que en supabase el id siempre es 0 IMPORTANTE: mejorarlo cuando tenga tiempo
                 ActividadSubEtapa = ActividadSubEtapa,
                 CantidadSubEtapa = CantidadSubEtapa,
                 PrecioUniSubEtapa = PrecioUniSubEtapa,
                 PrecioUniEjeSubEtapa = PrecioUniEjeSubEtapa,
-                TotalSubEstapa = TotalSubEstapa,
+                TotalSubEstapa = TotalSubEstapa, // This should be calculated
                 MontoEjeSubEtapa = MontoEjeSubEtapa,
                 DiasCalSubEtapa = DiasCalSubEtapa,
                 DiasEjeSubEtapa = DiasEjeSubEtapa,
                 IdEtapa = IdEtapa,
-                IdUniMedida = IdUniMedida
+                IdUniMedida = IdUniMedida,
+                CreatedAt = System.DateTime.UtcNow // Ensure CreatedAt is set
             };
+            // Calculate TotalSubEstapa if applicable
+            if (subEtapa.CantidadSubEtapa.HasValue && subEtapa.PrecioUniSubEtapa.HasValue)
+            {
+                subEtapa.TotalSubEstapa = subEtapa.CantidadSubEtapa.Value * subEtapa.PrecioUniSubEtapa.Value;
+            }
 
-            await _dataService.SaveSubEtapa(subEtapa);
+
+            await _dataService.SaveSubEtapa(subEtapa); //
             await Shell.Current.DisplayAlert("Éxito", "Subetapa guardada correctamente.", "OK");
             ActividadSubEtapa = string.Empty;
             CantidadSubEtapa = null;
@@ -82,6 +93,10 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
             IdUniMedida = null;
             await CargarSubEtapasAsync();
         }
+        catch (System.Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", $"No se pudo guardar la subetapa: {ex.Message}", "OK");
+        }
         finally
         {
             IsBusy = false;
@@ -93,11 +108,41 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         IsBusy = true;
         try
         {
-            var lista = await _dataService.GetSubEtapasByEtapaId(IdEtapa);
-            System.Diagnostics.Debug.WriteLine($"[CargarSubEtapasAsync] Total de sub etapas: {lista.Count()}");
+            var lista = await _dataService.GetSubEtapasByEtapaId(IdEtapa); //
+            System.Diagnostics.Debug.WriteLine($"[CargarSubEtapasAsync] Total de sub etapas: {lista.Count()}"); //
             SubEtapas.Clear();
-            foreach (var sub in lista)
+            foreach (var sub in lista.OrderBy(s => s.CreatedAt)) // Order by CreatedAt or NumeroSubEtapa
                 SubEtapas.Add(sub);
+        }
+        catch (System.Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar las subetapas: {ex.Message}", "OK");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task NavigateToRegistrarRecursosAsync(SubEtapa subEtapa)
+    {
+        if (subEtapa == null || subEtapa.Id == 0) // subEtapa.Id debería ser el ServerId si está sincronizado
+        {
+            // Si subEtapa.Id es un LocalId porque aún no se ha sincronizado,
+            // no podrás crear FKs en Supabase. Deberías sincronizar la subEtapa primero.
+            await Shell.Current.DisplayAlert("Error", "La SubEtapa no es válida o necesita ser sincronizada primero para agregar recursos.", "OK");
+            return;
+        }
+        IsBusy = true;
+        try
+        {
+            // Ensure AppShell has RegistrarRecursoUtiPage registered
+            await Shell.Current.GoToAsync($"{nameof(RegistrarRecursoUtiPage)}?idSubEtapa={subEtapa.Id}");
+        }
+        catch (System.Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error de Navegación", $"No se pudo navegar: {ex.Message}", "OK");
         }
         finally
         {
@@ -105,4 +150,3 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         }
     }
 }
-

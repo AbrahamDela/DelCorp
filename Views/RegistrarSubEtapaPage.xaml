@@ -1,62 +1,67 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:viewmodel="clr-namespace:DelCorp.ViewModels"
+             xmlns:vm="clr-namespace:DelCorp.ViewModels"
+             xmlns:model="clr-namespace:DelCorp.Models"
              x:Class="DelCorp.Views.RegistrarSubEtapaPage"
-             Title="Registrar Subetapa">
-
+             x:DataType="vm:RegistrarSubEtapaViewModel"
+             Title="Registrar Sub-Etapas">
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="18">
-            <Label Text="Actividad de la Subetapa" />
-            <Entry Placeholder="Ej: Armado de acero"
-                   Text="{Binding ActividadSubEtapa}" />
+        <VerticalStackLayout Spacing="10" Padding="20">
 
-            <Label Text="Cantidad" />
-            <Entry Placeholder="Ej: 5"
-                   Text="{Binding CantidadSubEtapa}" Keyboard="Numeric" />
+            <Label Text="Nueva Sub-Etapa" FontAttributes="Bold" FontSize="Medium"/>
+            <Entry Placeholder="Actividad de la Sub-Etapa" Text="{Binding ActividadSubEtapa}"/>
+            <Entry Placeholder="Cantidad" Keyboard="Numeric" Text="{Binding CantidadSubEtapa}"/>
+            <Entry Placeholder="Precio Unitario" Keyboard="Numeric" Text="{Binding PrecioUniSubEtapa}"/>
+            <Button Text="Guardar Sub-Etapa" Command="{Binding GuardarSubEtapaCommand}"/>
 
-            <Label Text="Precio Unitario" />
-            <Entry Placeholder="Ej: 100"
-                   Text="{Binding PrecioUniSubEtapa}" Keyboard="Numeric" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Center"/>
 
-            <Label Text="Precio Unitario Ejecutado" />
-            <Entry Placeholder="Ej: 90"
-                   Text="{Binding PrecioUniEjeSubEtapa}" Keyboard="Numeric" />
+            <Line StrokeThickness="1" Margin="0,20"/>
 
-            <Label Text="Total Subetapa" />
-            <Entry Placeholder="Ej: 500"
-                   Text="{Binding TotalSubEstapa}" Keyboard="Numeric" />
-
-            <Label Text="Monto Ejecutado Subetapa" />
-            <Entry Placeholder="Ej: 450"
-                   Text="{Binding MontoEjeSubEtapa}" Keyboard="Numeric" />
-
-            <Label Text="Días Calendario" />
-            <Entry Placeholder="Ej: 2"
-                   Text="{Binding DiasCalSubEtapa}" Keyboard="Numeric" />
-
-            <Label Text="Días Ejecutados" />
-            <Entry Placeholder="Ej: 1"
-                   Text="{Binding DiasEjeSubEtapa}" Keyboard="Numeric" />
-
-            <Button Text="Guardar Subetapa"
-                    Command="{Binding GuardarSubEtapaCommand}"/>
-
-            <Label Text="Subetapas registradas" Margin="0,20,0,0"/>
+            <Label Text="Sub-Etapas Registradas" FontAttributes="Bold" FontSize="Medium"/>
             <CollectionView ItemsSource="{Binding SubEtapas}">
                 <CollectionView.ItemTemplate>
-                    <DataTemplate>
-                        <Frame Margin="0,5,0,5" Padding="10" BorderColor="Gray">
-                            <VerticalStackLayout>
-                                <Label Text="{Binding ActividadSubEtapa}" FontAttributes="Bold"/>
-                                <Label Text="Cantidad:" />
-                                <Label Text="{Binding CantidadSubEtapa}" />
-                                <Label Text="Total:" />
-                                <Label Text="{Binding TotalSubEstapa}" />
-                            </VerticalStackLayout>
+                    <DataTemplate x:DataType="model:SubEtapa">
+                        <Frame Padding="10" Margin="0,5" BorderColor="LightGray" CornerRadius="5">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+                                <Label Grid.Row="0" Grid.Column="0" FontAttributes="Bold">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Actividad: " FontAttributes="Bold"/>
+                                            <Span Text="{Binding ActividadSubEtapa}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <Label Grid.Row="1" Grid.Column="0">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Cantidad: " FontAttributes="Bold"/>
+                                            <Span Text="{Binding CantidadSubEtapa}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <Label Grid.Row="2" Grid.Column="0" >
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Total: C$" FontAttributes="Bold"/>
+                                            <Span Text="{Binding TotalSubEstapa, StringFormat='{0:N2}'}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+
+                                <Button Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" 
+                                        Text="Recursos" 
+                                        VerticalOptions="Center"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RegistrarSubEtapaViewModel}}, Path=NavigateToRegistrarRecursosCommand}"
+                                        CommandParameter="{Binding .}"/>
+                            </Grid>
                         </Frame>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
+                <CollectionView.EmptyView>
+                    <Label Text="No hay sub-etapas registradas para esta etapa." HorizontalOptions="Center" VerticalOptions="Center" Margin="20"/>
+                </CollectionView.EmptyView>
             </CollectionView>
         </VerticalStackLayout>
     </ScrollView>

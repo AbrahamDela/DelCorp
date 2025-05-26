@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:DelCorp.ViewModels"
+             xmlns:model="clr-namespace:DelCorp.Models"
+             x:Class="DelCorp.Views.RegistrarRecursoUtiPage"
+             x:DataType="vm:RegistrarRecursoUtiViewModel"
+             Title="{Binding CurrentSubEtapa.ActividadSubEtapa, StringFormat='Recursos para: {0}'}">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="10" Padding="20">
+            <Label Text="{Binding ErrorMessage}" TextColor="Red" IsVisible="{Binding ErrorMessage, Converter={StaticResource StringToBoolConverter}}"/>
+
+            <Label Text="Añadir Nuevo Recurso" FontAttributes="Bold" FontSize="Medium"/>
+
+            <Picker Title="Categoría Recurso"
+                    ItemsSource="{Binding DisponibleCategoriasRec}"
+                    ItemDisplayBinding="{Binding NombreCatRec}"
+                    SelectedItem="{Binding SelectedCategoriaRec}"/>
+
+            <Picker Title="Recurso" 
+                    ItemsSource="{Binding DisponibleRecursos}" 
+                    ItemDisplayBinding="{Binding NombreRecurso}"
+                    SelectedItem="{Binding SelectedRecurso}"/>
+
+            <Picker Title="Unidad de Medida"
+                    ItemsSource="{Binding DisponibleUniMedRe}"
+                    ItemDisplayBinding="{Binding NombreUniMedRe}"
+                    SelectedItem="{Binding SelectedUniMedRe}"/>
+
+            <Entry Placeholder="Cantidad" Keyboard="Numeric" Text="{Binding Cantidad}"/>
+            <Entry Placeholder="Precio Unitario" Keyboard="Numeric" Text="{Binding PrecioUnitario}"/>
+            <Label Text="{Binding TotalCalculado, StringFormat='Total: C${0:N2}'}"/>
+
+            <Button Text="Añadir Recurso" Command="{Binding AddRecursoUtiCommand}" IsEnabled="{Binding IsNotBusy}"/>
+
+            <Line StrokeThickness="1" Margin="0,20"/>
+
+            <Label Text="Recursos Asignados" FontAttributes="Bold" FontSize="Medium"/>
+            <CollectionView ItemsSource="{Binding RecursosUtilizados}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="model:RecursoUti">
+                        <Frame Padding="10" Margin="0,5" BorderColor="LightGray" CornerRadius="5">
+                            <Grid ColumnDefinitions="*, Auto, Auto" RowDefinitions="Auto, Auto, Auto">
+                                <Label Grid.Column="0" Text="{Binding Recurso.NombreRecurso}" FontAttributes="Bold"/>
+                                <Label Grid.Column="0" Grid.Row="1" Text="{Binding CantidadRecursosUti, StringFormat='Cantidad: {0}'}"/>
+                                <Label Grid.Column="1" Grid.Row="1" Text="{Binding UniMedRe.AbreviaturaUniMedRe, StringFormat=' {0}'}"/>
+                                <Label Grid.Column="0" Grid.Row="2" Text="{Binding TotalRecursosUti, StringFormat='Total: C${0:N2}'}"/>
+
+                                <Button Grid.Column="2" Grid.RowSpan="3" Text="Eliminar" VerticalOptions="Center"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RegistrarRecursoUtiViewModel}}, Path=DeleteRecursoUtiCommand}"
+                                        CommandParameter="{Binding .}" BackgroundColor="IndianRed"/>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+                <CollectionView.EmptyView>
+                    <Label Text="No hay recursos asignados a esta sub etapa." HorizontalOptions="Center" VerticalOptions="Center" Margin="20"/>
+                </CollectionView.EmptyView>
+            </CollectionView>
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Center" VerticalOptions="Center"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

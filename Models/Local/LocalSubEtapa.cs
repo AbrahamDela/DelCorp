@@ -7,6 +7,7 @@ public class LocalSubEtapa
 {
     [PrimaryKey, AutoIncrement]
     public long Id { get; set; }
+    public long? ServerId { get; set; } // ID del servidor (Supabase), nullable
     public DateTime CreatedAt { get; set; }
     public long NumeroSubEtapa { get; set; }
     public string ActividadSubEtapa { get; set; }
