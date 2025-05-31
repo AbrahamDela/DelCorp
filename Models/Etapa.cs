@@ -21,7 +21,7 @@ namespace DelCorp.Models
         public long IdPresupuesto { get; set; }
         public long? IdUniMedida { get; set; }
 
-        // Add this line to include SubEtapas
+        public UniMedRe UniMedida { get; set; }
         public List<SubEtapa> SubEtapas { get; set; } = new List<SubEtapa>();
     }
 }

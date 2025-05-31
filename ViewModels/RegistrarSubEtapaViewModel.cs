@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using DelCorp.Models;
 using DelCorp.Services;
-using DelCorp.Views; // Required for nameof(RegistrarRecursoUtiPage)
+using DelCorp.Views;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 
@@ -25,6 +25,12 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
     [ObservableProperty] private long? idUniMedida;
     [ObservableProperty] private ObservableCollection<SubEtapa> subEtapas = new();
     [ObservableProperty] private bool isBusy;
+
+    [ObservableProperty]
+    private ObservableCollection<UniMedRe> _disponibleUniMedRe = new();
+
+    [ObservableProperty]
+    private UniMedRe _selectedUniMedRe;
     public record SubEtapaRegistradaMessage(long IdEtapa);
 
 
@@ -37,11 +43,49 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
 
     public async void ApplyQueryAttributes(IDictionary<string, object> query)
     {
-        if (query.TryGetValue("idEtapa", out var idObj) && long.TryParse(idObj.ToString(), out var idEtapa))
+        if (query.TryGetValue("idEtapa", out var idObj) && long.TryParse(idObj.ToString(), out var etapaIdVal)) //
         {
-            IdEtapa = idEtapa;
-            await CargarSubEtapasAsync();
+            if (IdEtapa != etapaIdVal || !SubEtapas.Any())
+            {
+                IdEtapa = etapaIdVal;
+                await CargarDatosInicialesAsync();
+            }
         }
+    }
+
+    private async Task CargarDatosInicialesAsync()
+    {
+        await CargarUniMedReAsync();
+        await CargarSubEtapasAsync();
+    }
+
+    private async Task CargarUniMedReAsync()
+    {
+        // Optimización: no recargar si ya está ocupado o si ya hay datos y no se espera que cambien frecuentemente.
+        if (IsBusy && DisponibleUniMedRe.Any()) return;
+        IsBusy = true;
+        try
+        {
+            var unidades = await _dataService.GetUniMedReAsync(); //
+            DisponibleUniMedRe.Clear();
+            foreach (var unidad in unidades.OrderBy(u => u.NombreUniMedRe)) // Ordenar para el Picker
+            {
+                DisponibleUniMedRe.Add(unidad);
+            }
+        }
+        catch (System.Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar las unidades de medida: {ex.Message}", "OK");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    partial void OnSelectedUniMedReChanged(UniMedRe value)
+    {
+        IdUniMedida = value?.Id;
     }
 
     [RelayCommand]
@@ -65,22 +109,16 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
                 CantidadSubEtapa = CantidadSubEtapa,
                 PrecioUniSubEtapa = PrecioUniSubEtapa,
                 PrecioUniEjeSubEtapa = PrecioUniEjeSubEtapa,
-                TotalSubEstapa = TotalSubEstapa, // This should be calculated
+                TotalSubEstapa = TotalSubEstapa,
                 MontoEjeSubEtapa = MontoEjeSubEtapa,
                 DiasCalSubEtapa = DiasCalSubEtapa,
                 DiasEjeSubEtapa = DiasEjeSubEtapa,
                 IdEtapa = IdEtapa,
                 IdUniMedida = IdUniMedida,
-                CreatedAt = System.DateTime.UtcNow // Ensure CreatedAt is set
+                CreatedAt = System.DateTime.UtcNow
             };
-            // Calculate TotalSubEstapa if applicable
-            if (subEtapa.CantidadSubEtapa.HasValue && subEtapa.PrecioUniSubEtapa.HasValue)
-            {
-                subEtapa.TotalSubEstapa = subEtapa.CantidadSubEtapa.Value * subEtapa.PrecioUniSubEtapa.Value;
-            }
 
-
-            await _dataService.SaveSubEtapa(subEtapa); //
+            await _dataService.SaveSubEtapa(subEtapa);
             await Shell.Current.DisplayAlert("Éxito", "Subetapa guardada correctamente.", "OK");
             ActividadSubEtapa = string.Empty;
             CantidadSubEtapa = null;
@@ -127,17 +165,16 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
     [RelayCommand]
     private async Task NavigateToRegistrarRecursosAsync(SubEtapa subEtapa)
     {
-        if (subEtapa == null || subEtapa.Id == 0) // subEtapa.Id debería ser el ServerId si está sincronizado
+        if (subEtapa == null || subEtapa.Id == 0) // subEtapa.Id deberia ser el ServerId si está sincronizado
         {
             // Si subEtapa.Id es un LocalId porque aún no se ha sincronizado,
-            // no podrás crear FKs en Supabase. Deberías sincronizar la subEtapa primero.
+            // no poras crear FKs en Supabase. Deberia sincronizar la subEtapa primero.
             await Shell.Current.DisplayAlert("Error", "La SubEtapa no es válida o necesita ser sincronizada primero para agregar recursos.", "OK");
             return;
         }
         IsBusy = true;
         try
         {
-            // Ensure AppShell has RegistrarRecursoUtiPage registered
             await Shell.Current.GoToAsync($"{nameof(RegistrarRecursoUtiPage)}?idSubEtapa={subEtapa.Id}");
         }
         catch (System.Exception ex)

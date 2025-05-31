@@ -13,7 +13,7 @@ namespace DelCorp.Services
         private readonly LocalDatabaseService _localDatabase;
         private readonly IConnectivity _connectivity;
         private readonly ILogger<OfflineFirstDataService> _logger;
-
+        private static readonly Random _randomGenerator = new Random();
         public OfflineFirstDataService(Supabase.Client supabaseClient, LocalDatabaseService localDatabase, IConnectivity connectivity, ILogger<OfflineFirstDataService> logger)
         {
             _supabaseClient = supabaseClient;
@@ -435,11 +435,18 @@ namespace DelCorp.Services
                     System.Diagnostics.Debug.WriteLine("[GetEtapasByPresupuestoId] No hay conexión a internet. Solo se usan etapas locales.");
                 }
 
-                // **NEW: Populate SubEtapas for each Etapa**
+                var allUniMedRe = await GetUniMedReAsync();
+
                 foreach (var etapa in dtoEtapas)
                 {
+                    if (etapa.IdUniMedida.HasValue && etapa.IdUniMedida.Value != 0)
+                    {
+                        etapa.UniMedida = allUniMedRe.FirstOrDefault(um => um.Id == etapa.IdUniMedida.Value);
+                        
+                    }
+
                     var subEtapas = await GetSubEtapasByEtapaId(etapa.Id);
-                    etapa.SubEtapas = subEtapas.ToList(); // Assuming GetSubEtapasByEtapaId returns IEnumerable<SubEtapa>
+                    etapa.SubEtapas = subEtapas.ToList();
                     System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Cargadas {etapa.SubEtapas.Count} subetapas para Etapa ID: {etapa.Id}");
                 }
 
@@ -548,14 +555,8 @@ namespace DelCorp.Services
 
         public static long GenerarIdAleatorio()
         {
-            var buffer = new byte[8];
-            using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
-            {
-                rng.GetBytes(buffer);
-            }
-            long result = BitConverter.ToInt64(buffer, 0);
-            // Asegura que sea positivo
-            return Math.Abs(result);
+            int numeroAleatorioInt = _randomGenerator.Next(1, 100_000_000);
+            return numeroAleatorioInt;
         }
 
         //Mejorarlo solo se muestran los presupuestos que se guardan en el servidor, pero si se estan guardando localmente
@@ -823,6 +824,16 @@ namespace DelCorp.Services
                 else
                 {
                     System.Diagnostics.Debug.WriteLine("[GetSubEtapasByEtapaId] No hay conexión a Internet. Se usan solo subetapas locales.");
+                }
+
+                var allUniMedRe = await GetUniMedReAsync();
+
+                foreach (var subEtapaDto in dtoEtapas)
+                {
+                    if (subEtapaDto.IdUniMedida.HasValue && subEtapaDto.IdUniMedida.Value != 0)
+                    {
+                        subEtapaDto.UniMedida = allUniMedRe.FirstOrDefault(um => um.Id == subEtapaDto.IdUniMedida.Value);
+                    }
                 }
 
                 System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Retornando {dtoEtapas.Count} subetapas.");

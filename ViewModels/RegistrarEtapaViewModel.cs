@@ -31,6 +31,12 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
     [ObservableProperty]
     private ObservableCollection<Etapa> etapas = new();
 
+    [ObservableProperty]
+    private ObservableCollection<UniMedRe> _disponibleUniMedRe = new();
+
+    [ObservableProperty]
+    private UniMedRe _selectedUniMedRe;
+
     public bool IsNotBusy => !IsBusy;
 
     public RegistrarEtapaViewModel(IDataService dataService)
@@ -59,6 +65,11 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
             await Shell.Current.DisplayAlert("Error", "Cantidad debe ser mayor a cero", "OK");
             return;
         }
+        if (SelectedUniMedRe == null)
+        {
+            await Shell.Current.DisplayAlert("Error", "Debe seleccionar una Unidad de Medida.", "OK");
+            return;
+        }
 
         IsBusy = true;
         try
@@ -78,7 +89,8 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
                 Id = nuevoId,
                 ActividadEtapa = ActividadEtapa,
                 CantidadEtapa = CantidadEtapa,
-                IdPresupuesto = IdPresupuesto
+                IdPresupuesto = IdPresupuesto,
+                IdUniMedida = SelectedUniMedRe.Id
             };
 
             await _dataService.SaveEtapa(etapa);
@@ -88,6 +100,7 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
             ActividadEtapa = string.Empty;
             CantidadEtapa = null;
             MontoTotalEtapa = null;
+            SelectedUniMedRe = null;
         }
         catch (Exception ex)
         {
@@ -104,7 +117,30 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
     {
         IdPresupuesto = presupuestoId;
         System.Diagnostics.Debug.WriteLine($"Se inicio con el id: {IdPresupuesto}");
+        await CargarUniMedReAsync();
         await CargarEtapasAsync();
+    }
+
+    private async Task CargarUniMedReAsync()
+    {
+        IsBusy = true;
+        try
+        {
+            var unidades = await _dataService.GetUniMedReAsync(); //
+            DisponibleUniMedRe.Clear();
+            foreach (var unidad in unidades)
+            {
+                DisponibleUniMedRe.Add(unidad);
+            }
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", $"No se pudo cargar las unidades de medida: {ex.Message}", "OK");
+        }
+        finally
+        {
+            IsBusy = false; // Asegúrate de que IsBusy se establezca en false en todos los caminos
+        }
     }
 
     public async Task CargarEtapasAsync()

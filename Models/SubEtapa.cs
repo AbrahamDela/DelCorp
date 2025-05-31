@@ -21,4 +21,6 @@ public class SubEtapa
     public long? DiasEjeSubEtapa { get; set; }
     public long IdEtapa { get; set; }
     public long? IdUniMedida { get; set; }
+
+    public UniMedRe UniMedida { get; set; }
 }

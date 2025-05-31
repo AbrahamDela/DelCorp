@@ -13,11 +13,6 @@
 
             <Label Text="Añadir Nuevo Recurso" FontAttributes="Bold" FontSize="Medium"/>
 
-            <Picker Title="Categoría Recurso"
-                    ItemsSource="{Binding DisponibleCategoriasRec}"
-                    ItemDisplayBinding="{Binding NombreCatRec}"
-                    SelectedItem="{Binding SelectedCategoriaRec}"/>
-
             <Picker Title="Recurso" 
                     ItemsSource="{Binding DisponibleRecursos}" 
                     ItemDisplayBinding="{Binding NombreRecurso}"

@@ -10,10 +10,14 @@
         <VerticalStackLayout Spacing="10" Padding="20">
 
             <Label Text="Nueva Sub-Etapa" FontAttributes="Bold" FontSize="Medium"/>
-            <Entry Placeholder="Actividad de la Sub-Etapa" Text="{Binding ActividadSubEtapa}"/>
-            <Entry Placeholder="Cantidad" Keyboard="Numeric" Text="{Binding CantidadSubEtapa}"/>
-            <Entry Placeholder="Precio Unitario" Keyboard="Numeric" Text="{Binding PrecioUniSubEtapa}"/>
-            <Button Text="Guardar Sub-Etapa" Command="{Binding GuardarSubEtapaCommand}"/>
+            <Entry Text="{Binding ActividadSubEtapa}" Placeholder="Actividad de la Subetapa" />
+            <Entry Text="{Binding CantidadSubEtapa}" Placeholder="Cantidad" Keyboard="Numeric" />
+            <Picker Title="Unidad de Medida (Opcional)"
+                    ItemsSource="{Binding DisponibleUniMedRe}"
+                    ItemDisplayBinding="{Binding NombreUniMedRe}" 
+                    SelectedItem="{Binding SelectedUniMedRe}" />
+
+            <Button Text="Guardar Subetapa" Command="{Binding GuardarSubEtapaCommand}" />
 
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Center"/>
 
@@ -38,10 +42,11 @@
                                         <FormattedString>
                                             <Span Text="Cantidad: " FontAttributes="Bold"/>
                                             <Span Text="{Binding CantidadSubEtapa}"/>
+                                            <Span Text="{Binding UniMedida.AbreviaturaUniMedRe, StringFormat=' {0}', TargetNullValue=''}" />
                                         </FormattedString>
                                     </Label.FormattedText>
                                 </Label>
-                                <Label Grid.Row="2" Grid.Column="0" >
+                               <Label Grid.Row="2" Grid.Column="0" >
                                     <Label.FormattedText>
                                         <FormattedString>
                                             <Span Text="Total: C$" FontAttributes="Bold"/>

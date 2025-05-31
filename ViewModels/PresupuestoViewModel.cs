@@ -139,8 +139,15 @@ namespace DelCorp.ViewModels
         [RelayCommand]
         private async Task NavigateToPresupuestoDetails(Presupuesto presupuesto)
         {
-            var uri = $"{nameof(RegistrarEtapaPage)}?id={presupuesto.Id}";
-            await Shell.Current.GoToAsync(uri);
+            try
+            {
+                var uri = $"{nameof(RegistrarEtapaPage)}?id={presupuesto.Id}";
+                await Shell.Current.GoToAsync(uri);
+            }
+            catch (Exception ex)
+            {
+                await Shell.Current.DisplayAlert("Error", $"No se pudo navegar a los detalles del presupuesto: {ex.Message}", "OK");
+            }
         }
 
         [RelayCommand]
