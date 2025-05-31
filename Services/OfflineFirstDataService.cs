@@ -753,6 +753,52 @@ namespace DelCorp.Services
             }
         }
 
+        public async Task<SubEtapa> GetSubEtapaByIdAsync(long subEtapaId)
+        {
+            try
+            {
+                LocalSubEtapa localSubEtapa = await _localDatabase.GetLocalSubEtapaByIdAsync(subEtapaId);
+
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    try
+                    {
+                        var response = await _supabaseClient
+                            .From<SupabaseSubEtapa>()
+                            .Filter("id", Postgrest.Constants.Operator.Equals, subEtapaId.ToString())
+                            .Single();
+
+                        if (response != null)
+                        {
+                            var remoteDto = response.ToDto();
+                            if (localSubEtapa == null || (localSubEtapa.ServerId == remoteDto.Id && localSubEtapa.IsSynced))
+                            {
+                                var updatedLocal = remoteDto.ToLocal(isSynced: true);
+                                if (localSubEtapa != null) updatedLocal.Id = localSubEtapa.Id;
+                                await _localDatabase.SaveSubEtapaAsync(updatedLocal);
+                                return remoteDto;
+                            }
+                        }
+                    }
+                    catch (Postgrest.Exceptions.PostgrestException pgex) when (pgex.Message.Contains("PGRST116"))
+                    {
+                        _logger.LogWarning($"SubEtapa with ID {subEtapaId} not found on server. PGRST116.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error fetching SubEtapa {subEtapaId} from Supabase. Falling back to local if available.");
+                    }
+                }
+
+                return localSubEtapa?.ToDto();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in GetSubEtapaByIdAsync for {subEtapaId}.");
+                return null;
+            }
+        }
+
         public async Task<IEnumerable<SubEtapa>> GetSubEtapasByEtapaId(long etapaId)
         {
             try

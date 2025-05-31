@@ -5,7 +5,7 @@ using DelCorp.Services;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Input; // For ICommand
+using System.Windows.Input;
 
 namespace DelCorp.ViewModels
 {
@@ -18,7 +18,7 @@ namespace DelCorp.ViewModels
         private long _idSubEtapa;
 
         [ObservableProperty]
-        private SubEtapa _currentSubEtapa; // Optional: Load SubEtapa details
+        private SubEtapa _currentSubEtapa;
 
         [ObservableProperty]
         private ObservableCollection<RecursoUti> _recursosUtilizados;
@@ -118,6 +118,9 @@ namespace DelCorp.ViewModels
                 await LoadCategoriasRecAsync(); // Load categories first
                 await LoadRecursosAsync();    // Then load resources (can be filtered by category)
                 await LoadUniMedReAsync();
+                await UpdateParentSubEtapaTotalAsync();
+
+                CurrentSubEtapa = await _dataService.GetSubEtapaByIdAsync(IdSubEtapa);
             }
             catch (System.Exception ex)
             {
@@ -196,6 +199,7 @@ namespace DelCorp.ViewModels
                 savedItem.UniMedRe = SelectedUniMedRe;
 
                 RecursosUtilizados.Add(savedItem);
+                await UpdateParentSubEtapaTotalAsync();
 
                 // Clear form
                 SelectedRecurso = null;
@@ -227,6 +231,7 @@ namespace DelCorp.ViewModels
             {
                 await _dataService.DeleteRecursoUtiAsync(recursoUti.Id);
                 RecursosUtilizados.Remove(recursoUti);
+                await UpdateParentSubEtapaTotalAsync();
             }
             catch (System.Exception ex)
             {
@@ -235,6 +240,36 @@ namespace DelCorp.ViewModels
             finally
             {
                 IsBusy = false;
+            }
+        }
+
+        private async Task UpdateParentSubEtapaTotalAsync()
+        {
+            if (IdSubEtapa == 0) return;
+
+            try
+            {
+                var recursosDeLaSubEtapa = await _dataService.GetRecursosUtiBySubEtapaIdAsync(IdSubEtapa);
+                decimal nuevoTotalSubEtapa = recursosDeLaSubEtapa.Sum(r => r.TotalRecursosUti ?? 0M);
+
+                var parentSubEtapaToUpdate = await _dataService.GetSubEtapaByIdAsync(IdSubEtapa);
+
+                if (parentSubEtapaToUpdate != null)
+                {
+                    parentSubEtapaToUpdate.TotalSubEstapa = nuevoTotalSubEtapa;
+                    await _dataService.SaveSubEtapa(parentSubEtapaToUpdate);
+
+                    if (CurrentSubEtapa != null && CurrentSubEtapa.Id == parentSubEtapaToUpdate.Id)
+                    {
+                        CurrentSubEtapa.TotalSubEstapa = nuevoTotalSubEtapa;
+                        OnPropertyChanged(nameof(CurrentSubEtapa));
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                ErrorMessage = $"Error actualizando total de la subetapa: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"Error actualizando total de la subetapa: {ex.Message}");
             }
         }
     }

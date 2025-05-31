@@ -6,6 +6,30 @@ namespace DelCorp.Services.Mapping;
 
 public static class SubEtapaMapper
 {
+    public static LocalSubEtapa ToLocal(this SubEtapa subEtapa, bool isSynced = false)
+    {
+        if (subEtapa == null)
+            throw new ArgumentNullException(nameof(subEtapa));
+
+        return new LocalSubEtapa
+        {
+            Id = subEtapa.Id,
+            CreatedAt = subEtapa.CreatedAt,
+            NumeroSubEtapa = subEtapa.NumeroSubEtapa,
+            ActividadSubEtapa = subEtapa.ActividadSubEtapa,
+            CantidadSubEtapa = subEtapa.CantidadSubEtapa,
+            PrecioUniSubEtapa = subEtapa.PrecioUniSubEtapa,
+            PrecioUniEjeSubEtapa = subEtapa.PrecioUniEjeSubEtapa,
+            TotalSubEstapa = subEtapa.TotalSubEstapa,
+            MontoEjeSubEtapa = subEtapa.MontoEjeSubEtapa,
+            DiasCalSubEtapa = subEtapa.DiasCalSubEtapa,
+            DiasEjeSubEtapa = subEtapa.DiasEjeSubEtapa,
+            IdEtapa = subEtapa.IdEtapa,
+            IdUniMedida = subEtapa.IdUniMedida,
+            IsSynced = isSynced
+        };
+    }
+
     public static LocalSubEtapa ToLocal(this SubEtapa subEtapaDto)
     {
         if (subEtapaDto == null) return null;

@@ -109,7 +109,7 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
                 CantidadSubEtapa = CantidadSubEtapa,
                 PrecioUniSubEtapa = PrecioUniSubEtapa,
                 PrecioUniEjeSubEtapa = PrecioUniEjeSubEtapa,
-                TotalSubEstapa = TotalSubEstapa,
+                //TotalSubEstapa = TotalSubEstapa,
                 MontoEjeSubEtapa = MontoEjeSubEtapa,
                 DiasCalSubEtapa = DiasCalSubEtapa,
                 DiasEjeSubEtapa = DiasEjeSubEtapa,

@@ -29,18 +29,19 @@ namespace DelCorp.Services
         //SubEtapas de presupuestos
         Task<IEnumerable<SubEtapa>> GetSubEtapasByEtapaId(long etapaId);
         Task SaveSubEtapa(SubEtapa subEtapa);
+        Task<SubEtapa> GetSubEtapaByIdAsync(long subEtapaId);
 
         // CategoriaRec
         Task<IEnumerable<CategoriaRec>> GetCategoriasRecAsync();
-        Task SaveCategoriaRecAsync(CategoriaRec categoria); // For admin purposes if needed
+        Task SaveCategoriaRecAsync(CategoriaRec categoria);
 
         // UniMedRe
         Task<IEnumerable<UniMedRe>> GetUniMedReAsync();
-        Task SaveUniMedReAsync(UniMedRe uniMedRe); // For admin purposes if needed
+        Task SaveUniMedReAsync(UniMedRe uniMedRe);
 
         // Recurso
         Task<IEnumerable<Recurso>> GetRecursosAsync(long? idCategoriaRec = null);
-        Task SaveRecursoAsync(Recurso recurso); // For admin purposes if needed
+        Task SaveRecursoAsync(Recurso recurso);
 
         // RecursoUti
         Task<IEnumerable<RecursoUti>> GetRecursosUtiBySubEtapaIdAsync(long subEtapaId);

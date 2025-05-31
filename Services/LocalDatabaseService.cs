@@ -16,11 +16,11 @@ public class LocalDatabaseService : IDisposable
         _database.CreateTableAsync<LocalProject>().Wait();
         _database.CreateTableAsync<LocalPresupuesto>().Wait();
         _database.CreateTableAsync<LocalEtapa>().Wait();
-        _database.CreateTableAsync<LocalSubEtapa>();
+        _database.CreateTableAsync<LocalSubEtapa>().Wait();
         _database.CreateTableAsync<LocalCategoriaRec>().Wait();
-_database.CreateTableAsync<LocalUniMedRe>().Wait();
-_database.CreateTableAsync<LocalRecurso>().Wait();
-_database.CreateTableAsync<LocalRecursoUti>().Wait();
+        _database.CreateTableAsync<LocalUniMedRe>().Wait();
+        _database.CreateTableAsync<LocalRecurso>().Wait();
+        _database.CreateTableAsync<LocalRecursoUti>().Wait();
     }
 
     public async Task ClearSessionAsync()
@@ -189,6 +189,12 @@ _database.CreateTableAsync<LocalRecursoUti>().Wait();
         return await _database.Table<LocalSubEtapa>().Where(x => x.IdEtapa == etapaId).ToListAsync();
     }
 
+    public async Task<LocalSubEtapa> GetLocalSubEtapaByIdAsync(long id)
+    {
+        return await _database.Table<LocalSubEtapa>()
+                             .Where(s => s.ServerId == id || s.Id == id)
+                             .FirstOrDefaultAsync();
+    }
     public async Task SaveSubEtapaAsync(LocalSubEtapa subEtapa)
     {
         await _database.InsertAsync(subEtapa);
