@@ -2,9 +2,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:DelCorp.ViewModels"
              xmlns:models="clr-namespace:DelCorp.Models"
-             x:Class="DelCorp.Views.RegistrarEtapaPage"
+             xmlns:converters="clr-namespace:DelCorp.Converters" x:Class="DelCorp.Views.RegistrarEtapaPage"
              x:DataType="viewmodels:RegistrarEtapaViewModel"
              Title="Registrar Etapas del Presupuesto">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
 
     <ScrollView>
         <VerticalStackLayout Spacing="10" Padding="20">
@@ -34,17 +40,22 @@
                     IsVisible="{Binding MostrarCampoNuevaActividad}"
                     IsEnabled="{Binding PickersForNewActivityEnabled}" />
 
-            <Entry Placeholder="Cantidad de la Etapa"
-                   Keyboard="Numeric"
-                   Text="{Binding CantidadEtapa}" />
-
             <Button Text="Guardar Etapa"
                     Command="{Binding GuardarEtapaCommand}"
                     IsEnabled="{Binding IsNotBusy}" />
 
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
 
+
             <Label Text="Etapas Registradas" FontAttributes="Bold" FontSize="Medium" Margin="0,20,0,0"/>
+
+            <Button Text="Guardar Orden de Etapas"
+                    Command="{Binding SaveOrderChangesCommand}"
+                    IsVisible="{Binding HasPendingOrderChanges}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    BackgroundColor="OrangeRed" TextColor="White"
+                    Margin="0,5,0,5"/>
+
             <CollectionView ItemsSource="{Binding Etapas}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Etapa">

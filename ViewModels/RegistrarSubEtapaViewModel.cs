@@ -16,22 +16,10 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
     private readonly IDataService _dataService;
 
     [ObservableProperty] private long _idEtapa;
-
-    // Campo de entrada principal para la SubEtapa, además de la Actividad
-    [ObservableProperty] private decimal? _cantidadSubEtapa; // El usuario ingresa esto
-
-    // Campos que se calculan o se actualizan desde la página de recursos
-    [ObservableProperty] private decimal? _precioUniSubEtapa; // Se calculará (Total / Cantidad)
-    [ObservableProperty] private decimal? _totalSubEstapa;    // Se actualizará desde recursos
-
-    // Campo de entrada numérica directa
+    [ObservableProperty] private decimal? _cantidadSubEtapa;
+    [ObservableProperty] private decimal? _precioUniSubEtapa;
+    [ObservableProperty] private decimal? _totalSubEstapa;
     [ObservableProperty] private long? _diasCalSubEtapa;
-
-    // Otros campos (si son necesarios y editables, de lo contrario, se pueden quitar del formulario)
-    // [ObservableProperty] private decimal? _precioUniEjeSubEtapa;
-    // [ObservableProperty] private decimal? _montoEjeSubEtapa;
-    // [ObservableProperty] private long? _diasEjeSubEtapa;
-
 
     [ObservableProperty] private ObservableCollection<SubEtapa> _subEtapas = new();
     [ObservableProperty] private bool _isBusy;
@@ -49,18 +37,20 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
     private string _nombreNuevaActividad;
     [ObservableProperty]
     private bool _mostrarCampoNuevaActividad;
-
     [ObservableProperty]
     private string _unidadMedidaActividadSeleccionada;
-
     [ObservableProperty]
     private bool _pickersForNewActivityEnabled;
+
+    [ObservableProperty]
+    private bool _hasPendingSubEtapaOrderChanges = false; // Nueva propiedad para cambios de orden
 
     public bool IsNotBusy => !IsBusy;
 
     private void SetIsBusy(bool busy)
     {
         IsBusy = busy;
+        OnPropertyChanged(nameof(IsNotBusy)); // Asegúrate que esto se llama
     }
 
     public RegistrarSubEtapaViewModel(IDataService dataService)
@@ -69,6 +59,7 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         PickersForNewActivityEnabled = true;
     }
 
+    // ... (OnSelectedCategoriaActividadChanged, OnSelectedActividadChanged sin cambios significativos para esta tarea) ...
     async partial void OnSelectedCategoriaActividadChanged(CategoriaActividad oldValue, CategoriaActividad newValue)
     {
         // Lógica si es necesaria
@@ -94,7 +85,6 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
                 if (value.UnidadMedidaId.HasValue)
                 {
                     Task.Run(async () => {
-                        // Asegurarse que _dataService esté disponible y no sea null
                         if (_dataService != null)
                         {
                             var um = (await _dataService.GetUniMedReAsync()).FirstOrDefault(u => u.Id == value.UnidadMedidaId.Value);
@@ -118,20 +108,30 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         }
     }
 
+
     public async void ApplyQueryAttributes(IDictionary<string, object> query)
     {
         if (query.TryGetValue("idEtapa", out var idObj) && long.TryParse(idObj.ToString(), out var etapaIdVal))
         {
-            bool needsFullLoad = (IdEtapa != etapaIdVal || !SubEtapas.Any());
-            IdEtapa = etapaIdVal;
-            if (needsFullLoad)
+            bool needsFullLoadOrDifferentEtapa = IdEtapa != etapaIdVal;
+
+            if (needsFullLoadOrDifferentEtapa)
             {
-                await CargarDatosInicialesAsync();
+                if (HasPendingSubEtapaOrderChanges)
+                {
+                    Debug.WriteLine($"Cambiando de Etapa ID {IdEtapa} a {etapaIdVal} con cambios de orden pendientes. Los cambios se perderán.");
+                    // Opcional: preguntar al usuario. Por ahora, se descartan.
+                    HasPendingSubEtapaOrderChanges = false;
+                }
+                IdEtapa = etapaIdVal;
+                await CargarDatosInicialesAsync(); // Incluye CargarSubEtapasAsync
             }
-            else
+            else if (!SubEtapas.Any() || !HasPendingSubEtapaOrderChanges) // Misma etapa, sin subetapas o sin cambios pendientes
             {
+                IdEtapa = etapaIdVal; // Asegurar que IdEtapa esté seteado
                 await CargarSubEtapasAsync();
             }
+            // Si es la misma etapa y SÍ hay cambios pendientes, no hacemos nada para que el usuario pueda guardarlos.
         }
     }
 
@@ -141,8 +141,8 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         try
         {
             await CargarCategoriasActividadAsync();
-            await CargarActividadesAsync(null, null);
-            await CargarSubEtapasAsync();
+            await CargarActividadesAsync(null, null); // Carga actividades generales
+            await CargarSubEtapasAsync(); // Carga subetapas para el IdEtapa actual
         }
         catch (Exception ex)
         {
@@ -155,6 +155,7 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         }
     }
 
+    // ... (CargarCategoriasActividadAsync, CargarActividadesAsync sin cambios) ...
     private async Task CargarCategoriasActividadAsync()
     {
         bool wasBusy = IsBusy;
@@ -214,7 +215,6 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         }
     }
 
-    // Se actualiza cuando TotalSubEstapa (desde recursos) o CantidadSubEtapa (ingresada por usuario) cambian.
     partial void OnTotalSubEstapaChanged(decimal? oldValue, decimal? newValue) => RecalcularPrecioUnitarioSubEtapa();
     partial void OnCantidadSubEtapaChanged(decimal? oldValue, decimal? newValue) => RecalcularPrecioUnitarioSubEtapa();
 
@@ -226,16 +226,17 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         }
         else
         {
-            PrecioUniSubEtapa = null; // o 0
+            PrecioUniSubEtapa = null;
         }
     }
 
     [RelayCommand]
-    public async Task GuardarSubEtapaAsync()
+    public async Task GuardarSubEtapaAsync() // Guardar NUEVA subetapa
     {
         SetIsBusy(true);
         long? idActividadParaGuardar = null;
 
+        // ... (Validaciones y lógica de creación de nueva actividad sin cambios) ...
         if (SelectedActividad == null)
         {
             await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una actividad para la subetapa.", "OK");
@@ -243,7 +244,6 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
             return;
         }
 
-        // Lógica para registrar nueva actividad (si aplica)
         if (SelectedActividad.IdActividad == -1)
         {
             if (string.IsNullOrWhiteSpace(NombreNuevaActividad))
@@ -258,16 +258,14 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
                 SetIsBusy(false);
                 return;
             }
-            // Asumimos que la nueva actividad hereda la UOM de alguna forma o se pide un picker adicional
-            // Para simplificar, si no se define explícitamente una UOM para la NUEVA actividad, podría quedar null.
-            // Es importante que la tabla `actividades` permita `unidad_medida_id` nullable si este es el caso.
-            // O, añadir un picker para `UniMedRe` cuando `MostrarCampoNuevaActividad` es true.
 
             var nuevaActividadDto = new Actividad
             {
                 NombreActividad = NombreNuevaActividad,
                 CategoriaActividadId = SelectedCategoriaActividad.IdCategoriaActividad,
-                // UnidadMedidaId = idDeLaUnidadDeMedidaSeleccionadaParaNuevaActividad, // Si se añade picker
+                // Asumimos que UnidadMedidaId se seleccionará para la nueva actividad si es necesario
+                // o se deja null si la tabla lo permite.
+                // UnidadMedidaId = _selectedUnidadMedidaParaNuevaActividad?.Id, 
                 CreatedAt = System.DateTime.UtcNow
             };
             var actividadGuardada = await _dataService.SaveActividadAsync(nuevaActividadDto);
@@ -278,7 +276,7 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
                 return;
             }
             idActividadParaGuardar = actividadGuardada.IdActividad;
-            await CargarActividadesAsync(null, null);
+            await CargarActividadesAsync(null, null); // Recargar actividades
         }
         else
         {
@@ -292,7 +290,6 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
             return;
         }
 
-        // Validar CantidadSubEtapa ingresada por el usuario
         if (CantidadSubEtapa == null || CantidadSubEtapa.Value <= 0)
         {
             await Shell.Current.DisplayAlert("Validación", "La cantidad de la subetapa debe ser un valor positivo.", "OK");
@@ -307,34 +304,35 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
             return;
         }
 
+
         try
         {
             long idSubEtapaLocal = OfflineFirstDataService.GenerarIdAleatorio();
+            long nuevoNumeroSubEtapa = (SubEtapas.Any() ? SubEtapas.Max(s => s.NumeroSubEtapa) : 0) + 1;
 
             var subEtapa = new SubEtapa
             {
-                Id = idSubEtapaLocal,
+                Id = idSubEtapaLocal, // ID temporal para el DTO, el servicio lo manejará
                 ActividadSubEtapaId = idActividadParaGuardar,
-                CantidadSubEtapa = CantidadSubEtapa, // Guardar la cantidad ingresada por el usuario
-                PrecioUniSubEtapa = null, // Se calculará después de añadir recursos
-                TotalSubEstapa = null,    // Se actualizará desde recursos
+                CantidadSubEtapa = CantidadSubEtapa,
+                PrecioUniSubEtapa = null,
+                TotalSubEstapa = null,
                 DiasCalSubEtapa = DiasCalSubEtapa,
                 IdEtapa = IdEtapa,
                 CreatedAt = System.DateTime.UtcNow,
-                NumeroSubEtapa = (SubEtapas.Any() ? SubEtapas.Max(s => s.NumeroSubEtapa) : 0) + 1
+                NumeroSubEtapa = nuevoNumeroSubEtapa // Asignar el número de subetapa
             };
 
-            await _dataService.SaveSubEtapa(subEtapa);
+            await _dataService.SaveSubEtapa(subEtapa); // El servicio debería manejar el ID final
 
-            // Limpiar campos del formulario
             SelectedActividad = null;
-            CantidadSubEtapa = null; // Limpiar la cantidad ingresada
+            CantidadSubEtapa = null;
             DiasCalSubEtapa = null;
-            // Limpiar propiedades calculadas/de solo lectura que se muestran en el form
             PrecioUniSubEtapa = null;
             TotalSubEstapa = null;
+            // No es necesario limpiar NombreNuevaActividad aquí, ya que se limpia cuando SelectedActividad cambia.
 
-            await CargarSubEtapasAsync();
+            await CargarSubEtapasAsync(); // Recarga y ordena por NumeroSubEtapa
             await Shell.Current.DisplayAlert("Éxito", "Subetapa guardada. Añada recursos para calcular costos.", "OK");
         }
         catch (System.Exception ex)
@@ -354,9 +352,9 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         {
             var listaSubEtapasDto = await _dataService.GetSubEtapasByEtapaId(IdEtapa);
             SubEtapas.Clear();
-            foreach (var sub in listaSubEtapasDto.OrderBy(s => s.NumeroSubEtapa).ThenBy(s => s.CreatedAt))
+            // Ordenar por NumeroSubEtapa al cargar
+            foreach (var sub in listaSubEtapasDto.OrderBy(s => s.NumeroSubEtapa))
             {
-                // Recalcular precio unitario al cargar, por si Total o Cantidad cambiaron.
                 if (sub.CantidadSubEtapa.HasValue && sub.CantidadSubEtapa > 0 && sub.TotalSubEstapa.HasValue)
                 {
                     sub.PrecioUniSubEtapa = sub.TotalSubEstapa / sub.CantidadSubEtapa;
@@ -367,6 +365,7 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
                 }
                 SubEtapas.Add(sub);
             }
+            HasPendingSubEtapaOrderChanges = false; // Resetea al cargar desde la fuente
         }
         catch (System.Exception ex)
         {
@@ -382,11 +381,29 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
     [RelayCommand]
     private async Task NavigateToRegistrarRecursosAsync(SubEtapa subEtapa)
     {
-        if (subEtapa == null || subEtapa.Id == 0)
-        {
-            await Shell.Current.DisplayAlert("Error", "La SubEtapa no es válida.", "OK");
+        if (subEtapa == null || subEtapa.Id == 0) // Id podría ser 0 si es una subetapa nueva aún no sincronizada con ID de servidor.
+        {                                        // El servicio SaveSubEtapa debe asegurar que el Id local sea usable o que el Id del DTO sea el del server.
+            await Shell.Current.DisplayAlert("Error", "La SubEtapa no es válida o no tiene un ID asignado.", "OK");
             return;
         }
+
+        if (HasPendingSubEtapaOrderChanges)
+        {
+            bool saveChanges = await Shell.Current.DisplayAlert("Cambios sin Guardar",
+                "El orden de las sub-etapas ha cambiado. ¿Desea guardar los cambios antes de continuar?",
+                "Guardar y Continuar", "Continuar sin Guardar");
+
+            if (saveChanges)
+            {
+                await SaveSubEtapaOrderChangesAsync();
+                if (IsBusy)
+                {
+                    await Shell.Current.DisplayAlert("Guardado en progreso", "Espere a que termine el guardado.", "OK");
+                    return;
+                }
+            }
+        }
+
         SetIsBusy(true);
         try
         {
@@ -402,12 +419,90 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         }
     }
 
+    // --- MÉTODOS Y COMANDOS PARA REORDENAMIENTO OPTIMIZADO DE SUBETAPAS ---
+    private void LocalRenumberSubEtapas()
+    {
+        for (int i = 0; i < SubEtapas.Count; i++)
+        {
+            if (SubEtapas[i].NumeroSubEtapa != (i + 1))
+            {
+                SubEtapas[i].NumeroSubEtapa = i + 1;
+            }
+        }
+        // Si SubEtapa NO es ObservableObject, y la UI no se actualiza para NumeroSubEtapa:
+        // var tempList = SubEtapas.ToList();
+        // SubEtapas.Clear();
+        // foreach(var se in tempList) SubEtapas.Add(se);
+    }
+
+    [RelayCommand]
+    private void MoveSubEtapaUp(SubEtapa subEtapa)
+    {
+        if (subEtapa == null || IsBusy) return;
+        int currentIndex = SubEtapas.IndexOf(subEtapa);
+        if (currentIndex > 0)
+        {
+            SubEtapas.Move(currentIndex, currentIndex - 1);
+            LocalRenumberSubEtapas();
+            HasPendingSubEtapaOrderChanges = true;
+        }
+    }
+
+    [RelayCommand]
+    private void MoveSubEtapaDown(SubEtapa subEtapa)
+    {
+        if (subEtapa == null || IsBusy) return;
+        int currentIndex = SubEtapas.IndexOf(subEtapa);
+        if (currentIndex < SubEtapas.Count - 1)
+        {
+            SubEtapas.Move(currentIndex, currentIndex + 1);
+            LocalRenumberSubEtapas();
+            HasPendingSubEtapaOrderChanges = true;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SaveSubEtapaOrderChangesAsync()
+    {
+        if (!HasPendingSubEtapaOrderChanges || IsBusy) return;
+
+        SetIsBusy(true);
+        try
+        {
+            // Los NumeroSubEtapa ya están actualizados en la colección local 'SubEtapas'.
+            // Persistimos estos cambios.
+            for (int i = 0; i < SubEtapas.Count; i++)
+            {
+                await _dataService.SaveSubEtapa(SubEtapas[i]);
+            }
+
+            HasPendingSubEtapaOrderChanges = false;
+            await Shell.Current.DisplayAlert("Éxito", "El orden de las sub-etapas ha sido guardado.", "OK");
+
+            // Recargar para asegurar consistencia desde la fuente de datos.
+            await CargarSubEtapasAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[RegistrarSubEtapaVM] Error en SaveSubEtapaOrderChangesAsync: {ex.Message}");
+            await Shell.Current.DisplayAlert("Error", $"No se pudo guardar el orden de las sub-etapas: {ex.Message}", "OK");
+            await CargarSubEtapasAsync(); // Reintentar cargar para un estado consistente
+        }
+        finally
+        {
+            SetIsBusy(false);
+        }
+    }
+
+    // Llamado desde la vista (Page.OnAppearing)
     public async Task OnPageAppearing()
     {
         Debug.WriteLine($"[RegistrarSubEtapaVM.OnPageAppearing] IdEtapa: {IdEtapa}");
-        if (IdEtapa != 0)
+        if (IdEtapa != 0 && !HasPendingSubEtapaOrderChanges) // Solo recargar si no hay cambios pendientes
         {
             await CargarSubEtapasAsync();
         }
+        // Si hay cambios pendientes, el usuario debe guardarlos explícitamente.
+        // La lógica en ApplyQueryAttributes ya maneja esto parcialmente.
     }
 }

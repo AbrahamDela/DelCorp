@@ -1,126 +1,91 @@
-<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:vm="clr-namespace:DelCorp.ViewModels"
-             xmlns:model="clr-namespace:DelCorp.Models"
-             xmlns:converter="clr-namespace:DelCorp.Converters"
+             xmlns:viewmodels="clr-namespace:DelCorp.ViewModels"
+             xmlns:models="clr-namespace:DelCorp.Models"
+             xmlns:converters="clr-namespace:DelCorp.Converters"
              x:Class="DelCorp.Views.RegistrarSubEtapaPage"
-             x:DataType="vm:RegistrarSubEtapaViewModel"
-             Title="Registrar Subetapa">
+             x:DataType="viewmodels:RegistrarSubEtapaViewModel"
+             Title="Registrar Sub-Etapas">
 
     <ContentPage.Resources>
-        <converter:NonNullToBoolConverter x:Key="NonNullToBoolConverter" />
-        <converter:InverseBoolConverter x:Key="InverseBoolConverter" />
-        <Style TargetType="Label">
-            <Setter Property="Margin" Value="0,8,0,2"/>
-            <Setter Property="FontAttributes" Value="Bold"/>
-        </Style>
-        <Style TargetType="Entry">
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-        <Style TargetType="Picker">
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
+        <ResourceDictionary>
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+        </ResourceDictionary>
     </ContentPage.Resources>
 
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="10">
+            <Label Text="Registrar Nueva Sub-Etapa" FontAttributes="Bold" FontSize="Medium"/>
 
-            <Label Text="Actividad de la Subetapa:"/>
-            <Picker ItemsSource="{Binding ActividadesDisponibles}"
-                    SelectedItem="{Binding SelectedActividad}"
+            <Picker Title="Seleccionar Actividad para Sub-Etapa"
+                    ItemsSource="{Binding ActividadesDisponibles}"
                     ItemDisplayBinding="{Binding NombreActividad}"
-                    Title="Seleccione una actividad..."/>
+                    SelectedItem="{Binding SelectedActividad}" />
 
-            <HorizontalStackLayout Spacing="5" IsVisible="{Binding SelectedActividad, Converter={StaticResource NonNullToBoolConverter}}">
-                <Label Text="Unidad de Medida:" FontAttributes="Bold" VerticalOptions="Center"/>
-                <Label Text="{Binding UnidadMedidaActividadSeleccionada, FallbackValue='N/D'}" VerticalOptions="Center"/>
-            </HorizontalStackLayout>
+            <Entry Placeholder="Nombre de Nueva Actividad (si aplica)"
+                   Text="{Binding NombreNuevaActividad}"
+                   IsVisible="{Binding MostrarCampoNuevaActividad}" />
 
-            <VerticalStackLayout IsVisible="{Binding MostrarCampoNuevaActividad}">
-                <Label Text="Nombre de la Nueva Actividad:"/>
-                <Entry Placeholder="Ingrese nombre de la nueva actividad"
-                       Text="{Binding NombreNuevaActividad}"/>
-                <Label Text="Categoría para Nueva Actividad:"/>
-                <Picker ItemsSource="{Binding CategoriasActividad}"
-                        SelectedItem="{Binding SelectedCategoriaActividad}"
-                        ItemDisplayBinding="{Binding NombreCategoriaActividad}"
-                        Title="Seleccione categoría..."
-                        IsEnabled="{Binding PickersForNewActivityEnabled}"/>
-            </VerticalStackLayout>
+            <Picker Title="Categoría para Nueva Actividad"
+                    ItemsSource="{Binding CategoriasActividad}"
+                    ItemDisplayBinding="{Binding NombreCategoriaActividad}"
+                    SelectedItem="{Binding SelectedCategoriaActividad}"
+                    IsVisible="{Binding MostrarCampoNuevaActividad}"
+                    IsEnabled="{Binding PickersForNewActivityEnabled}" />
 
-            <Label Text="Cantidad de la Subetapa:"/>
-            <Entry Placeholder="Ingrese cantidad de la actividad"
-                   Text="{Binding CantidadSubEtapa}"
-                   Keyboard="Numeric"/>
+            <Label Text="{Binding UnidadMedidaActividadSeleccionada}" IsVisible="{Binding MostrarCampoNuevaActividad, Converter={StaticResource InverseBoolConverter}}" />
 
-            <Label Text="Días Calendario (Estimados):"/>
-            <Entry Placeholder="Ej: 10" Text="{Binding DiasCalSubEtapa}" Keyboard="Numeric"/>
 
-            <Button Text="Guardar Sub-Etapa" Command="{Binding GuardarSubEtapaCommand}"/>
-            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Center"/>
+            <Entry Placeholder="Cantidad de la Sub-Etapa" Keyboard="Numeric" Text="{Binding CantidadSubEtapa}" />
+            <Entry Placeholder="Días Calendario Estimados" Keyboard="Numeric" Text="{Binding DiasCalSubEtapa}" />
+            <Button Text="Guardar Sub-Etapa" Command="{Binding GuardarSubEtapaCommand}" IsEnabled="{Binding IsNotBusy}"/>
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
 
-            <Label Text="Subetapas Registradas" FontSize="Medium" FontAttributes="Bold" Margin="0,20,0,5"/>
-            <CollectionView ItemsSource="{Binding SubEtapas}" EmptyView="No hay sub-etapas registradas.">
+            <Label Text="Sub-Etapas Registradas" FontAttributes="Bold" FontSize="Medium" Margin="0,20,0,0"/>
+
+            <Button Text="Guardar Orden de Sub-Etapas"
+                    Command="{Binding SaveSubEtapaOrderChangesCommand}"
+                    IsVisible="{Binding HasPendingSubEtapaOrderChanges}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    BackgroundColor="OrangeRed" TextColor="White" Margin="0,5,0,5"/>
+
+            <CollectionView ItemsSource="{Binding SubEtapas}">
                 <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="model:SubEtapa">
+                    <DataTemplate x:DataType="models:SubEtapa">
                         <Frame Padding="10" Margin="0,5" CornerRadius="5" BorderColor="LightGray">
-                            <Grid RowSpacing="5">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <Label Grid.Row="0" Grid.Column="0" FontSize="Small">
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="5">
+                                <Label Grid.Row="0" Grid.Column="0" FontAttributes="Bold">
                                     <Label.FormattedText>
                                         <FormattedString>
-                                            <Span Text="{Binding NumeroSubEtapa, StringFormat='{0}. '}" FontAttributes="Bold"/>
-                                            <Span Text="{Binding Actividad.NombreActividad, FallbackValue='Actividad no definida'}"/>
-                                        </FormattedString>
-                                    </Label.FormattedText>
-                                </Label>
-                                <Label Grid.Row="1" Grid.Column="0" FontSize="Micro">
-                                    <Label.FormattedText>
-                                        <FormattedString>
-                                            <Span Text="Cantidad: "/>
-                                            <Span Text="{Binding CantidadSubEtapa, FallbackValue='N/D'}"/>
-                                            <Span Text=" "/>
-                                            <Span Text="{Binding Actividad.UnidadMedida.AbreviaturaUniMedRe, FallbackValue=''}" />
-                                        </FormattedString>
-                                    </Label.FormattedText>
-                                </Label>
-                                <Label Grid.Row="2" Grid.Column="0" FontSize="Micro">
-                                    <Label.FormattedText>
-                                        <FormattedString>
-                                            <Span Text="P. Unitario: "/>
-                                            <Span Text="{Binding PrecioUniSubEtapa, StringFormat='{0:C}', FallbackValue='N/A'}"/>
-                                        </FormattedString>
-                                    </Label.FormattedText>
-                                </Label>
-                                <Label Grid.Row="3" Grid.Column="0" FontSize="Micro">
-                                    <Label.FormattedText>
-                                        <FormattedString>
-                                            <Span Text="Total: "/>
-                                            <Span Text="{Binding TotalSubEstapa, StringFormat='{0:C}', FallbackValue='N/A'}"/>
+                                            <Span Text="Sub-Etapa "/>
+                                            <Span Text="{Binding NumeroSubEtapa}"/>
+                                            <Span Text=": "/>
+                                            <Span Text="{Binding Actividad.NombreActividad}" />
                                         </FormattedString>
                                     </Label.FormattedText>
                                 </Label>
 
-                                <Button Grid.RowSpan="4" Grid.Column="1" Text="Recursos"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RegistrarSubEtapaViewModel}}, Path=NavigateToRegistrarRecursosCommand}"
-                                        CommandParameter="{Binding .}"
-                                        FontSize="Micro" Padding="5" Margin="5,0,0,0" VerticalOptions="Center"/>
+                                <Button Grid.Row="0" Grid.Column="1" Text="▲" FontSize="Small" Padding="5"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarSubEtapaViewModel}}, Path=MoveSubEtapaUpCommand}"
+                                        CommandParameter="{Binding .}"/>
+                                <Button Grid.Row="0" Grid.Column="2" Text="▼" FontSize="Small" Padding="5"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarSubEtapaViewModel}}, Path=MoveSubEtapaDownCommand}"
+                                        CommandParameter="{Binding .}"/>
+
+                                <Label Grid.Row="1" Grid.Column="0" Text="{Binding CantidadSubEtapa, StringFormat='Cantidad: {0:N2}'}" />
+                                <Label Grid.Row="2" Grid.Column="0" Text="{Binding TotalSubEstapa, StringFormat='Total Calculado: C{0:C}'}" />
+
+                                <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Text="Añadir/Ver Recursos"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarSubEtapaViewModel}}, Path=NavigateToRegistrarRecursosCommand}"
+                                        CommandParameter="{Binding .}" Margin="0,5,0,0"/>
                             </Grid>
                         </Frame>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
+            <Label Text="No hay sub-etapas registradas para esta etapa."
+                   IsVisible="{Binding SubEtapas.Count, Converter={StaticResource InverseBoolConverter}}"
+                   HorizontalOptions="CenterAndExpand" Margin="0,10"/>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>
