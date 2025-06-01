@@ -11,7 +11,7 @@ public class SubEtapa
     public long Id { get; set; }
     public DateTime CreatedAt { get; set; }
     public long NumeroSubEtapa { get; set; }
-    public string ActividadSubEtapa { get; set; }
+    public long? ActividadSubEtapaId { get; set; } // FK a la tabla actividades
     public decimal? CantidadSubEtapa { get; set; }
     public decimal? PrecioUniSubEtapa { get; set; }
     public decimal? PrecioUniEjeSubEtapa { get; set; }
@@ -22,5 +22,6 @@ public class SubEtapa
     public long IdEtapa { get; set; }
     public long? IdUniMedida { get; set; }
 
+    public Actividad Actividad { get; set; }
     public UniMedRe UniMedida { get; set; }
 }

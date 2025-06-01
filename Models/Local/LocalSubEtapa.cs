@@ -10,7 +10,7 @@ public class LocalSubEtapa
     public long? ServerId { get; set; } // ID del servidor (Supabase), nullable
     public DateTime CreatedAt { get; set; }
     public long NumeroSubEtapa { get; set; }
-    public string ActividadSubEtapa { get; set; }
+    public long? ActividadSubEtapaId { get; set; }
     public decimal? CantidadSubEtapa { get; set; }
     public decimal? PrecioUniSubEtapa { get; set; }
     public decimal? PrecioUniEjeSubEtapa { get; set; }

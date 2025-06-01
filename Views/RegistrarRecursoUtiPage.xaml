@@ -5,7 +5,7 @@
              xmlns:model="clr-namespace:DelCorp.Models"
              x:Class="DelCorp.Views.RegistrarRecursoUtiPage"
              x:DataType="vm:RegistrarRecursoUtiViewModel"
-             Title="{Binding CurrentSubEtapa.ActividadSubEtapa, StringFormat='Recursos para: {0}'}">
+             Title="Registrar recursos">
 
     <ScrollView>
         <VerticalStackLayout Spacing="10" Padding="20">

@@ -1,63 +1,81 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="DelCorp.Views.RegistrarEtapaPage"
-             xmlns:viewmodel="clr-namespace:DelCorp.ViewModels"
-             Title="Registrar Etapa">
+             xmlns:vm="clr-namespace:DelCorp.ViewModels" x:Class="DelCorp.Views.RegistrarEtapaPage"
+             Title="Registrar Nueva Etapa">
 
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="18">
+        <VerticalStackLayout Padding="20" Spacing="15">
 
-            <Label Text="Actividad de la Etapa" 
-                   Style="{StaticResource TitleSmall}" />
-            <Entry Placeholder="Ej: Excavación"
-                   Text="{Binding ActividadEtapa}" 
-                   ReturnType="Next"
-                   Keyboard="Default" />
+            <Label Text="Registrar Nueva Etapa" FontSize="Large" FontAttributes="Bold"/>
 
-            <Picker Title="Seleccione Unidad de Medida"
-                    ItemsSource="{Binding DisponibleUniMedRe}"
-                    ItemDisplayBinding="{Binding NombreUniMedRe}" SelectedItem="{Binding SelectedUniMedRe}">
-            </Picker>
+            <Label Text="Categoría de Actividad:"/>
+            <Picker ItemsSource="{Binding CategoriasActividad}"
+                    ItemDisplayBinding="{Binding NombreCategoriaActividad}"
+                    SelectedItem="{Binding SelectedCategoriaActividad}"
+                    Title="Seleccione una categoría"/>
 
-            <Label Text="Cantidad" 
-                   Style="{StaticResource LabelSmall}" />
-            <Entry Placeholder="Ej: 10"
-                   Text="{Binding CantidadEtapa}" 
-                   Keyboard="Numeric" />
-            
-            <Button Text="Guardar"
-                    Command="{Binding GuardarEtapaCommand}"
-                    Margin="0,30,0,0" />
+            <Label Text="Actividad:"/>
+            <Picker ItemsSource="{Binding ActividadesDisponibles}"
+                    ItemDisplayBinding="{Binding NombreActividad}"
+                    SelectedItem="{Binding SelectedActividad}"
+                    Title="Seleccione una actividad"/>
 
-            <Label Text="Etapas registradas" Margin="0,30,0,0" />
-            <CollectionView ItemsSource="{Binding Etapas}" SelectionMode="Single" x:Name="EtapasCollectionView">
+            <VerticalStackLayout IsVisible="{Binding MostrarCampoNuevaActividad}">
+                <Label Text="Nombre Nueva Actividad:"/>
+                <Entry Text="{Binding NombreNuevaActividad}"
+                       Placeholder="Escriba el nombre de la nueva actividad"/>
+            </VerticalStackLayout>
+
+            <Label Text="Unidad de Medida:"/>
+            <Picker ItemsSource="{Binding DisponibleUniMedRe}"
+                    ItemDisplayBinding="{Binding NombreUniMedRe}" SelectedItem="{Binding SelectedUniMedRe}"
+                    Title="Seleccione unidad de medida"/>
+
+            <Button Text="Guardar Etapa" Command="{Binding GuardarEtapaCommand}"/>
+            <ActivityIndicator IsRunning="{Binding IsBusy}"/>
+
+            <Label Text="Etapas del Presupuesto" FontSize="Medium" FontAttributes="Bold" Margin="0,20,0,0"/>
+            <CollectionView ItemsSource="{Binding Etapas}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate>
-                        <Frame Margin="0,5,0,5" Padding="10" BorderColor="{StaticResource Primary}">
+                        <Frame Padding="10" Margin="0,5" BorderColor="LightGray" CornerRadius="5">
                             <VerticalStackLayout>
-                                <Label Text="{Binding ActividadEtapa}" FontAttributes="Bold"/>
-                                <StackLayout Orientation="Horizontal">
-                                    <Label Text="Cantidad: " />
-                                    <Label Text="{Binding CantidadEtapa}" />
-                                    <Label Text="{Binding UniMedida.AbreviaturaUniMedRe, StringFormat=' {0}', TargetNullValue=' N/A'}" />
-                                </StackLayout>
-                                <Label Text="{Binding MontoTotalEtapa, StringFormat='{}{0:C}'}" />
-                                <Button Text="Registrar Subetapa"
-                                        Command="{Binding Source={x:Reference Name=EtapasCollectionView}, Path=BindingContext.RegistrarSubEtapaCommand}"
-                                        CommandParameter="{Binding .}" />
+                                <Label FontSize="Subtitle">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Actividad: " FontAttributes="Bold"/>
+                                            <Span Text="{Binding Actividad.NombreActividad}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <Label>
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Cantidad: " FontAttributes="Bold"/>
+                                            <Span Text="{Binding CantidadEtapa, StringFormat='{0:N2}'}"/>
+                                            <Span Text=" "/>
+                                            <Span Text="{Binding UniMedida.AbreviaturaUniMedRe}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <Label>
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Monto Total: " FontAttributes="Bold"/>
+                                            <Span Text="{Binding MontoTotalEtapa, StringFormat='{0:C}'}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <Button Text="Ver/Agregar Sub-Etapas" 
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RegistrarEtapaViewModel}}, Path=RegistrarSubEtapaCommand}"
+                                        CommandParameter="{Binding .}"/>
                             </VerticalStackLayout>
                         </Frame>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
 
-            <ActivityIndicator 
-                IsRunning="{Binding IsBusy}" 
-                IsVisible="{Binding IsBusy}" 
-                Color="{StaticResource Primary}" 
-                HorizontalOptions="Center" 
-                VerticalOptions="Center"/>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

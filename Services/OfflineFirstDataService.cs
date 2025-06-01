@@ -409,7 +409,7 @@ namespace DelCorp.Services
 
                                 localEtapa.IsSynced = true;
                                 await _localDatabase.SaveEtapaAsync(localEtapa);
-                                System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Etapa remota guardada localmente: Id={localEtapa.Id}, Actividad={localEtapa.ActividadEtapa}, PresupuestoId={localEtapa.IdPresupuesto},");
+                                System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Etapa remota guardada localmente: Id={localEtapa.Id}, Actividad={localEtapa.IdActividadEtapa}, PresupuestoId={localEtapa.IdPresupuesto},");
                             }
 
 
@@ -436,13 +436,13 @@ namespace DelCorp.Services
                 }
 
                 var allUniMedRe = await GetUniMedReAsync();
+                var todasActividades = await GetActividadesAsync();
 
                 foreach (var etapa in dtoEtapas)
                 {
-                    if (etapa.IdUniMedida.HasValue && etapa.IdUniMedida.Value != 0)
+                    if (etapa.IdActividadEtapa.HasValue)
                     {
-                        etapa.UniMedida = allUniMedRe.FirstOrDefault(um => um.Id == etapa.IdUniMedida.Value);
-                        
+                        etapa.Actividad = todasActividades.FirstOrDefault(a => a.IdActividad == etapa.IdActividadEtapa.Value);
                     }
 
                     var subEtapas = await GetSubEtapasByEtapaId(etapa.Id);
@@ -843,7 +843,7 @@ namespace DelCorp.Services
                                 localSubEtapa.IdEtapa = etapaId;
                                 localSubEtapa.IsSynced = true;
 
-                                System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Guardando subetapa remota localmente: Id={localSubEtapa.Id}, Actividad={localSubEtapa.ActividadSubEtapa}, EtapaId={localSubEtapa.IdEtapa}");
+                                System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Guardando subetapa remota localmente: Id={localSubEtapa.Id}, Actividad={localSubEtapa.ActividadSubEtapaId}, EtapaId={localSubEtapa.IdEtapa}");
 
                                 await _localDatabase.SaveSubEtapaAsync(localSubEtapa);
                             }
@@ -873,12 +873,13 @@ namespace DelCorp.Services
                 }
 
                 var allUniMedRe = await GetUniMedReAsync();
+                var todasActividades = await GetActividadesAsync();
 
                 foreach (var subEtapaDto in dtoEtapas)
                 {
-                    if (subEtapaDto.IdUniMedida.HasValue && subEtapaDto.IdUniMedida.Value != 0)
+                    if (subEtapaDto.ActividadSubEtapaId.HasValue)
                     {
-                        subEtapaDto.UniMedida = allUniMedRe.FirstOrDefault(um => um.Id == subEtapaDto.IdUniMedida.Value);
+                        subEtapaDto.Actividad = todasActividades.FirstOrDefault(a => a.IdActividad == subEtapaDto.ActividadSubEtapaId.Value);
                     }
                 }
 
@@ -1307,6 +1308,238 @@ namespace DelCorp.Services
                     _logger.LogError(ex, $"Failed to sync RecursoUti with LocalId {localItem.LocalId}."); //
                 }
             }
+        }
+
+        // --- Implementación para CategoriasActividad ---
+        public async Task<IEnumerable<CategoriaActividad>> GetCategoriasActividadAsync()
+        {
+            try
+            {
+                var localItems = await _localDatabase.GetCategoriasActividadAsync(); //
+                var dtos = localItems.ToDtoList(); // Asume que ActividadMapper tiene ToDtoList para LocalCategoriaActividad
+
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    try
+                    {
+                        var response = await _supabaseClient.From<SupabaseCategoriaActividad>().Get();
+                        var remoteDtos = response.Models.ToDtoList(); // Asume que ActividadMapper tiene ToDtoList para SupabaseCategoriaActividad
+
+                        // Lógica de Sincronización (simple: reemplazar local con remoto)
+                        // Podrías implementar una sincronización más robusta si es necesario
+                        await _localDatabase.ClearCategoriasActividadAsync(); //
+                        foreach (var dto in remoteDtos)
+                        {
+                            await _localDatabase.SaveCategoriaActividadAsync(dto.ToLocal(isSynced: true)); //
+                        }
+                        dtos = remoteDtos;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error sincronizando CategoriasActividad desde Supabase.");
+                        // Continuar con datos locales si la sincronización falla
+                    }
+                }
+                return dtos.OrderBy(c => c.NombreCategoriaActividad);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error obteniendo CategoriasActividad.");
+                return Enumerable.Empty<CategoriaActividad>();
+            }
+        }
+
+        public async Task SaveCategoriaActividadAsync(CategoriaActividad categoriaActividad)
+        {
+            _logger.LogInformation("SaveCategoriaActividadAsync llamado. Principalmente para admin/sincronización.");
+            var localItem = categoriaActividad.ToLocal(isSynced: false); // Mapear a local
+
+            if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+            {
+                try
+                {
+                    var supabaseItem = categoriaActividad.ToSupabase(); // Mapear a Supabase
+                    var response = await _supabaseClient.From<SupabaseCategoriaActividad>().Upsert(supabaseItem);
+                    var syncedItem = response.Models.FirstOrDefault()?.ToDto();
+
+                    if (syncedItem != null)
+                    {
+                        localItem = syncedItem.ToLocal(isSynced: true); // Actualizar local con datos del servidor
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error guardando CategoriaActividad '{categoriaActividad.NombreCategoriaActividad}' en Supabase.");
+                    localItem.IsSynced = false; // Marcar como no sincronizado si falla
+                }
+            }
+            await _localDatabase.SaveCategoriaActividadAsync(localItem); //
+        }
+
+        // --- Implementación para Actividades ---
+        public async Task<IEnumerable<Actividad>> GetActividadesAsync(long? categoriaActividadId = null)
+        {
+            try
+            {
+                // Obtener de la base de datos local
+                List<LocalActividad> localItems;
+                if (categoriaActividadId.HasValue)
+                {
+                    localItems = await _localDatabase.GetActividadesByCategoriaIdAsync(categoriaActividadId.Value); //
+                }
+                else
+                {
+                    localItems = await _localDatabase.GetActividadesAsync(); //
+                }
+                var dtos = localItems.ToDtoList(); // Asume ActividadMapper
+
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    try
+                    {
+                        var query = _supabaseClient.From<SupabaseActividad>();
+                        if (categoriaActividadId.HasValue)
+                        {
+                            query = (Supabase.Interfaces.ISupabaseTable<SupabaseActividad, Supabase.Realtime.RealtimeChannel>)query.Filter("categoria_actividad_id", Postgrest.Constants.Operator.Equals, categoriaActividadId.Value.ToString());
+                        }
+                        var response = await query.Get();
+                        var remoteDtos = response.Models.ToDtoList(); // Asume ActividadMapper
+
+                        // Lógica de Sincronización (simple: reemplazar local con remoto para la categoría o todas)
+                        if (categoriaActividadId.HasValue) // Si se filtra por categoría, solo limpiar y reemplazar para esa categoría
+                        {
+                            var localIdsParaCategoria = localItems.Where(a => a.CategoriaActividadId == categoriaActividadId.Value)
+                                                                  .Select(a => a.IdActividad).ToList();
+                            // Esta lógica de borrado es simplista. Una real implicaría comparar timestamps o un flag de borrado.
+                            // Por ahora, si obtenemos datos del servidor para una categoría, reemplazamos los locales de esa categoría.
+                        }
+                        else // Si no hay filtro de categoría, limpiar todas las actividades locales
+                        {
+                            await _localDatabase.ClearActividadesAsync(); //
+                        }
+
+                        foreach (var dto in remoteDtos) // Guardar/actualizar todas las actividades remotas obtenidas
+                        {
+                            await _localDatabase.SaveActividadAsync(dto.ToLocal(isSynced: true)); //
+                        }
+                        // Recargar desde local para asegurar consistencia después de la sincronización
+                        if (categoriaActividadId.HasValue)
+                        {
+                            localItems = await _localDatabase.GetActividadesByCategoriaIdAsync(categoriaActividadId.Value); //
+                        }
+                        else
+                        {
+                            localItems = await _localDatabase.GetActividadesAsync(); //
+                        }
+                        dtos = localItems.ToDtoList();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error sincronizando Actividades desde Supabase (CategoriaId: {categoriaActividadId}).");
+                    }
+                }
+
+                // Poblar CategoriaActividad para cada Actividad DTO
+                var todasCategorias = await GetCategoriasActividadAsync(); //
+                foreach (var actividadDto in dtos)
+                {
+                    if (actividadDto.CategoriaActividadId.HasValue)
+                    {
+                        actividadDto.CategoriaActividad = todasCategorias.FirstOrDefault(cat => cat.IdCategoriaActividad == actividadDto.CategoriaActividadId.Value);
+                    }
+                }
+                return dtos.OrderBy(a => a.NombreActividad);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error obteniendo Actividades.");
+                return Enumerable.Empty<Actividad>();
+            }
+        }
+
+        public async Task<Actividad> GetActividadByIdAsync(long actividadId)
+        {
+            try
+            {
+                var localItem = await _localDatabase.GetActividadByIdAsync(actividadId); //
+                var dto = localItem?.ToDto();
+
+                if (dto != null && dto.CategoriaActividadId.HasValue)
+                {
+                    var categorias = await GetCategoriasActividadAsync(); //
+                    dto.CategoriaActividad = categorias.FirstOrDefault(c => c.IdCategoriaActividad == dto.CategoriaActividadId.Value);
+                }
+
+                // Podrías añadir lógica para buscar en Supabase si no se encuentra localmente o si está desactualizado
+                return dto;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error obteniendo Actividad por ID: {actividadId}.");
+                return null;
+            }
+        }
+
+        public async Task<Actividad> SaveActividadAsync(Actividad actividad)
+        {
+            // Este método es crucial para cuando el usuario escribe una nueva actividad.
+            var localItem = actividad.ToLocal(isSynced: false);
+            Actividad syncedDto = null;
+
+            if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+            {
+                try
+                {
+                    // Usar ToSupabaseForUpsert para asegurar que IdActividad sea 0 si es nueva
+                    var supabaseItem = actividad.ToSupabaseForUpsert();
+
+                    var response = await _supabaseClient.From<SupabaseActividad>().Upsert(supabaseItem);
+                    var syncedSupabaseItem = response.Models.FirstOrDefault();
+
+                    if (syncedSupabaseItem != null)
+                    {
+                        syncedDto = syncedSupabaseItem.ToDto();
+                        // Actualizar el DTO original con el ID del servidor
+                        actividad.IdActividad = syncedDto.IdActividad;
+                        actividad.CreatedAt = syncedDto.CreatedAt; // Y cualquier otro campo generado por el servidor
+
+                        localItem = actividad.ToLocal(isSynced: true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error guardando Actividad '{actividad.NombreActividad}' en Supabase.");
+                    localItem.IsSynced = false;
+                }
+            }
+
+            // Si el localItem aún no tiene un ID (porque era nuevo y la sincronización falló o estaba offline),
+            // SaveActividadAsync en LocalDatabaseService necesita manejar la generación de un ID local si es necesario
+            // o asumir que ya tiene un ID (posiblemente temporal si se permite creación offline completa con IDs temporales).
+            // El mapper ToLocal actualmente usa actividad.IdActividad, que sería 0 para un nuevo ítem no sincronizado.
+            // Si IdActividad en LocalActividad es PK y no autoincremental, y esperamos que Supabase lo genere,
+            // entonces solo guardamos localmente DESPUÉS de una sincronización exitosa.
+            // Si queremos soporte offline completo para nuevas actividades, LocalActividad necesitaría
+            // un LocalId (PK, autoincrement) y un ServerId (IdActividad de Supabase).
+            // Por ahora, con la estructura actual de LocalActividad.IdActividad siendo PK:
+            if (localItem.IdActividad == 0 && syncedDto == null) // Nuevo, offline o sincronización falló sin ID
+            {
+                _logger.LogWarning($"No se pudo guardar la nueva actividad '{localItem.NombreActividad}' localmente sin un ID del servidor, ya que IdActividad es PK.");
+                // No se puede guardar localmente si IdActividad es la PK y es 0, a menos que sea autoincremental (no lo es).
+                // Esto requeriría cambiar LocalActividad.IdActividad a autoincremental y añadir un ServerId.
+                // O, el usuario no puede crear actividades si está offline.
+                // O, se genera un ID temporal negativo para guardarlo localmente y se resuelve en la sincronización.
+                // Por ahora, solo se guardará si se obtuvo un ID del servidor.
+                if (syncedDto != null)
+                { // Solo devolver el DTO si se sincronizó y tiene ID
+                    return syncedDto;
+                }
+                return null; // Indicar fallo si no se pudo obtener ID del servidor
+            }
+
+            await _localDatabase.SaveActividadAsync(localItem); //
+
+            return syncedDto ?? actividad; // Devolver el DTO sincronizado si está disponible, sino el original (que ahora podría tener ID)
         }
     }
 }

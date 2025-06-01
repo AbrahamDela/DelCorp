@@ -21,6 +21,8 @@ public class LocalDatabaseService : IDisposable
         _database.CreateTableAsync<LocalUniMedRe>().Wait();
         _database.CreateTableAsync<LocalRecurso>().Wait();
         _database.CreateTableAsync<LocalRecursoUti>().Wait();
+        _database.CreateTableAsync<LocalCategoriaActividad>().Wait();
+        _database.CreateTableAsync<LocalActividad>().Wait();
     }
 
     public async Task ClearSessionAsync()
@@ -337,4 +339,54 @@ public class LocalDatabaseService : IDisposable
 
     public async Task<List<LocalRecursoUti>> GetUnsyncedRecursosUtiAsync() =>
         await _database.Table<LocalRecursoUti>().Where(r => !r.IsSynced).ToListAsync();
+
+    // Para LocalCategoriaActividad
+    public async Task<List<LocalCategoriaActividad>> GetCategoriasActividadAsync() =>
+        await _database.Table<LocalCategoriaActividad>().ToListAsync();
+
+    public async Task SaveCategoriaActividadAsync(LocalCategoriaActividad item)
+    {
+        var existing = await _database.Table<LocalCategoriaActividad>()
+                                     .FirstOrDefaultAsync(x => x.IdCategoriaActividad == item.IdCategoriaActividad);
+        if (existing != null)
+        {
+            await _database.UpdateAsync(item);
+        }
+        else
+        {
+            await _database.InsertAsync(item);
+        }
+    }
+    public async Task ClearCategoriasActividadAsync() => await _database.DeleteAllAsync<LocalCategoriaActividad>();
+
+
+    // Para LocalActividad
+    public async Task<List<LocalActividad>> GetActividadesAsync() =>
+        await _database.Table<LocalActividad>().ToListAsync();
+
+    public async Task<List<LocalActividad>> GetActividadesByCategoriaIdAsync(long categoriaId) =>
+        await _database.Table<LocalActividad>().Where(a => a.CategoriaActividadId == categoriaId).ToListAsync();
+
+    public async Task<LocalActividad> GetActividadByIdAsync(long idActividad) =>
+        await _database.Table<LocalActividad>().FirstOrDefaultAsync(a => a.IdActividad == idActividad);
+
+    public async Task SaveActividadAsync(LocalActividad item)
+    {
+        var existing = await _database.Table<LocalActividad>()
+                                     .FirstOrDefaultAsync(x => x.IdActividad == item.IdActividad);
+        if (existing != null)
+        {
+            // Si es una actualización y el ID es generado por Supabase, el IdActividad ya debería estar.
+            // Si permites crear localmente con un ID temporal, necesitarás lógica para manejar eso al sincronizar.
+            await _database.UpdateAsync(item);
+        }
+        else
+        {
+            // Si el ID es generado por Supabase, este insert debería ocurrir después de obtener el ID del servidor.
+            // Si permites crear localmente y luego sincronizar, necesitarás una PK local autoincremental y un ServerId.
+            // Por ahora, asumimos que IdActividad viene del servidor o se genera de forma única antes de guardar localmente.
+            await _database.InsertAsync(item);
+        }
+    }
+    public async Task ClearActividadesAsync() => await _database.DeleteAllAsync<LocalActividad>();
 }

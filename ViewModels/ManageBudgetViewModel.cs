@@ -136,7 +136,7 @@ public partial class ManageBudgetViewModel : ObservableObject, IQueryAttributabl
         var nuevaEtapa = new Etapa
         {
             NumeroEtapa = int.Parse(NumeroEtapa),
-            ActividadEtapa = ActividadEtapa,
+            //ActividadEtapa = ActividadEtapa,
             //UnidadMedida = UnidadMedida,
             CantidadEtapa = CantidadEtapa,
             IdPresupuesto = (int)CurrentPresupuesto.Id

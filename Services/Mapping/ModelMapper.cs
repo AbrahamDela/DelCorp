@@ -197,7 +197,7 @@ namespace DelCorp.Services.Mapping
             {
                 Id = local.ServerId ?? local.Id,
                 NumeroEtapa = local.NumeroEtapa,
-                ActividadEtapa = local.ActividadEtapa,
+                IdActividadEtapa = local.IdActividadEtapa,
                 CantidadEtapa = local.CantidadEtapa,
                 MontoTotalEtapa = local.MontoTotalEtapa,
                 MontoEjeEtapa = local.MontoEjeEtapa,
@@ -219,7 +219,7 @@ namespace DelCorp.Services.Mapping
                 Id = (int)(dto.Id == 0 ? 0 : (long)dto.Id),
                 ServerId = dto.Id > 0 ? dto.Id : null,
                 NumeroEtapa = dto.NumeroEtapa,
-                ActividadEtapa = dto.ActividadEtapa,
+                IdActividadEtapa = dto.IdActividadEtapa,
                 CantidadEtapa = dto.CantidadEtapa,
                 MontoTotalEtapa = dto.MontoTotalEtapa,
                 MontoEjeEtapa = dto.MontoEjeEtapa,
@@ -241,7 +241,7 @@ namespace DelCorp.Services.Mapping
             {
                 Id = dto.Id,
                 NumeroEtapa = dto.NumeroEtapa,
-                ActividadEtapa = dto.ActividadEtapa,
+                IdActividadEtapa = dto.IdActividadEtapa,
                 CantidadEtapa = dto.CantidadEtapa,
                 MontoTotalEtapa = dto.MontoTotalEtapa,
                 MontoEjeEtapa = dto.MontoEjeEtapa,
@@ -262,7 +262,7 @@ namespace DelCorp.Services.Mapping
             {
                 Id = supabase.Id,
                 NumeroEtapa = supabase.NumeroEtapa,
-                ActividadEtapa = supabase.ActividadEtapa,
+                IdActividadEtapa = supabase.IdActividadEtapa,
                 CantidadEtapa = supabase.CantidadEtapa,
                 MontoTotalEtapa = supabase.MontoTotalEtapa,
                 MontoEjeEtapa = supabase.MontoEjeEtapa,
@@ -281,8 +281,8 @@ namespace DelCorp.Services.Mapping
             return localEtapas?
                 .Select(localEtapa => localEtapa.ToDto())
                 .Where(etapa => etapa != null)
-                .GroupBy(etapa => etapa.Id)  // Eliminar duplicados por ID
-                .Select(g => g.First())
+                //.GroupBy(etapa => etapa.Id)  // Eliminar duplicados por ID
+                //.Select(g => g.First())
                 .ToList() ?? new List<Etapa>();
         }
 
@@ -292,8 +292,8 @@ namespace DelCorp.Services.Mapping
             return supabaseEtapas?
                 .Select(supabaseEtapa => supabaseEtapa.ToDto())
                 .Where(etapa => etapa != null)
-                .GroupBy(etapa => etapa.Id)  // Eliminar duplicados por ID
-                .Select(g => g.First())
+                //.GroupBy(etapa => etapa.Id)  // Eliminar duplicados por ID
+                //.Select(g => g.First())
                 .ToList() ?? new List<Etapa>();
         }
     }

@@ -16,7 +16,7 @@ public static class SubEtapaMapper
             Id = subEtapa.Id,
             CreatedAt = subEtapa.CreatedAt,
             NumeroSubEtapa = subEtapa.NumeroSubEtapa,
-            ActividadSubEtapa = subEtapa.ActividadSubEtapa,
+            ActividadSubEtapaId = subEtapa.ActividadSubEtapaId,
             CantidadSubEtapa = subEtapa.CantidadSubEtapa,
             PrecioUniSubEtapa = subEtapa.PrecioUniSubEtapa,
             PrecioUniEjeSubEtapa = subEtapa.PrecioUniEjeSubEtapa,
@@ -40,7 +40,7 @@ public static class SubEtapaMapper
             ServerId = subEtapaDto.Id, // El Id del DTO es el ServerId
             CreatedAt = subEtapaDto.CreatedAt,
             NumeroSubEtapa = subEtapaDto.NumeroSubEtapa,
-            ActividadSubEtapa = subEtapaDto.ActividadSubEtapa,
+            ActividadSubEtapaId = subEtapaDto.ActividadSubEtapaId,
             CantidadSubEtapa = subEtapaDto.CantidadSubEtapa,
             PrecioUniSubEtapa = subEtapaDto.PrecioUniSubEtapa,
             PrecioUniEjeSubEtapa = subEtapaDto.PrecioUniEjeSubEtapa,
@@ -66,7 +66,7 @@ public static class SubEtapaMapper
                                                   // Para la navegación y FKs, se prefiere el ServerId.
             CreatedAt = local.CreatedAt,
             NumeroSubEtapa = local.NumeroSubEtapa,
-            ActividadSubEtapa = local.ActividadSubEtapa,
+            ActividadSubEtapaId = local.ActividadSubEtapaId,
             CantidadSubEtapa = local.CantidadSubEtapa,
             PrecioUniSubEtapa = local.PrecioUniSubEtapa,
             PrecioUniEjeSubEtapa = local.PrecioUniEjeSubEtapa,
@@ -89,7 +89,7 @@ public static class SubEtapaMapper
             Id = (subEtapaDto.Id <= 0) ? default(long) : subEtapaDto.Id,                                                                                   // Lo ideal es que el DTO sepa si su Id es un ServerId o un LocalId.
             CreatedAt = subEtapaDto.CreatedAt,
             NumeroSubEtapa = subEtapaDto.NumeroSubEtapa,
-            ActividadSubEtapa = subEtapaDto.ActividadSubEtapa,
+            ActividadSubEtapaId = subEtapaDto.ActividadSubEtapaId,
             CantidadSubEtapa = subEtapaDto.CantidadSubEtapa,
             PrecioUniSubEtapa = subEtapaDto.PrecioUniSubEtapa,
             PrecioUniEjeSubEtapa = subEtapaDto.PrecioUniEjeSubEtapa,
@@ -111,7 +111,7 @@ public static class SubEtapaMapper
             Id = supabase.Id, // Este es el ServerId
             CreatedAt = supabase.CreatedAt,
             NumeroSubEtapa = supabase.NumeroSubEtapa,
-            ActividadSubEtapa = supabase.ActividadSubEtapa,
+            ActividadSubEtapaId = supabase.ActividadSubEtapaId,
             CantidadSubEtapa = supabase.CantidadSubEtapa,
             PrecioUniSubEtapa = supabase.PrecioUniSubEtapa,
             PrecioUniEjeSubEtapa = supabase.PrecioUniEjeSubEtapa,
@@ -127,6 +127,12 @@ public static class SubEtapaMapper
     public static List<SubEtapa> ToDtoList(this IEnumerable<LocalSubEtapa> localSubEtapas)
     {
         return localSubEtapas.Select(local => local.ToDto()).ToList();
+    }
+
+    // METODO PARA SUPABASE LISTA
+    public static List<SubEtapa> ToDtoList(this IEnumerable<SupabaseSubEtapa> supabaseSubEtapas)
+    {
+        return supabaseSubEtapas?.Select(supabase => supabase.ToDto()).ToList() ?? new List<SubEtapa>();
     }
 }
 

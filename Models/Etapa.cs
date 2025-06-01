@@ -11,7 +11,7 @@ namespace DelCorp.Models
         public long Id { get; set; }
         public DateTime CreatedAt { get; set; }
         public long NumeroEtapa { get; set; }
-        public string ActividadEtapa { get; set; }
+        public long? IdActividadEtapa { get; set; }
         public decimal? CantidadEtapa { get; set; }
         public decimal? MontoTotalEtapa { get; set; }
         public decimal? MontoEjeEtapa { get; set; }
@@ -21,6 +21,7 @@ namespace DelCorp.Models
         public long IdPresupuesto { get; set; }
         public long? IdUniMedida { get; set; }
 
+        public Actividad Actividad { get; set; }
         public UniMedRe UniMedida { get; set; }
         public List<SubEtapa> SubEtapas { get; set; } = new List<SubEtapa>();
     }

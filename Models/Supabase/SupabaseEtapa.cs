@@ -17,8 +17,8 @@ public class SupabaseEtapa : BaseModel
     public DateTime CreatedAt { get; set; }
     [Column("numero_etapa")]
     public long NumeroEtapa { get; set; }
-    [Column("actividad_etapa")]
-    public string ActividadEtapa { get; set; }
+    [Column("id_actividad_etapa")]
+    public long? IdActividadEtapa { get; set; }
     [Column("cantidad_etapa")]
     public decimal? CantidadEtapa { get; set; }
     [Column("monto_total_etapa")]

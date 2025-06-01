@@ -15,7 +15,7 @@ namespace DelCorp.Models.Local
         public bool IsSynced { get; set; }
         public DateTime CreatedAt { get; set; }
         public long NumeroEtapa { get; set; }
-        public string ActividadEtapa { get; set; }
+        public long? IdActividadEtapa { get; set; }
         public decimal? CantidadEtapa { get; set; }
         public decimal? MontoTotalEtapa { get; set; }
         public decimal? MontoEjeEtapa { get; set; }
