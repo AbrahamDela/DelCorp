@@ -1,146 +1,106 @@
-<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:vm="clr-namespace:DelCorp.ViewModels"
-             xmlns:model="clr-namespace:DelCorp.Models"
-             xmlns:converter="clr-namespace:DelCorp.Converters"
+             xmlns:viewmodels="clr-namespace:DelCorp.ViewModels"
+             xmlns:models="clr-namespace:DelCorp.Models"
              x:Class="DelCorp.Views.RegistrarEtapaPage"
-             x:DataType="vm:RegistrarEtapaViewModel"
+             x:DataType="viewmodels:RegistrarEtapaViewModel"
              Title="Registrar Etapas del Presupuesto">
 
-    <ContentPage.Resources>
-        <ResourceDictionary>
-            <converter:NonNullToBoolConverter x:Key="NonNullToBoolConverter" />
-            <converter:InverseBoolConverter x:Key="InverseBoolConverter" />
-            <Style TargetType="Label">
-                <Setter Property="Margin" Value="0,5,0,0"/>
-                <Setter Property="FontAttributes" Value="Bold"/>
-            </Style>
-            <Style TargetType="Entry">
-                <Setter Property="Margin" Value="0,0,0,5"/>
-            </Style>
-            <Style TargetType="Picker">
-                <Setter Property="Margin" Value="0,0,0,5"/>
-            </Style>
-            <Style TargetType="Button">
-                <Setter Property="Margin" Value="0,10,0,0"/>
-                <Setter Property="BackgroundColor" Value="{StaticResource Primary}"/>
-                <Setter Property="TextColor" Value="White"/>
-            </Style>
-        </ResourceDictionary>
-    </ContentPage.Resources>
-
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="10">
+        <VerticalStackLayout Spacing="10" Padding="20">
 
-            <Label Text="Registrar Nueva Etapa" FontSize="Large" FontAttributes="Bold" HorizontalOptions="Center"/>
+            <Label Text="Registrar Nueva Etapa" FontAttributes="Bold" FontSize="Medium"/>
 
-            <Label Text="Actividad Principal de la Etapa:"/>
-            <Entry Placeholder="Buscar actividad por nombre..."
-                   Text="{Binding SearchTextActividad, Mode=TwoWay}"
-                   ClearButtonVisibility="WhileEditing"
-                   Margin="0,0,0,5"/>
-            <Picker ItemsSource="{Binding ActividadesDisponibles}"
-                    SelectedItem="{Binding SelectedActividad}"
+            <Picker Title="Seleccionar Actividad"
+                    ItemsSource="{Binding ActividadesDisponibles}"
                     ItemDisplayBinding="{Binding NombreActividad}"
-                    Title="Seleccione una actividad..."/>
+                    SelectedItem="{Binding SelectedActividad}" />
 
-            <VerticalStackLayout IsVisible="{Binding MostrarCampoNuevaActividad}">
-                <Label Text="Nombre de la Nueva Actividad:"/>
-                <Entry Placeholder="Ingrese nombre de la nueva actividad"
-                       Text="{Binding NombreNuevaActividad}"/>
+            <Entry Placeholder="Nombre de Nueva Actividad"
+                   Text="{Binding NombreNuevaActividad}"
+                   IsVisible="{Binding MostrarCampoNuevaActividad}" />
 
-                <Label Text="Categoría para Nueva Actividad:"/>
-                <Picker ItemsSource="{Binding CategoriasActividad}"
-                        SelectedItem="{Binding SelectedCategoriaActividad}"
-                        ItemDisplayBinding="{Binding NombreCategoriaActividad}"
-                        Title="Seleccione categoría..."
-                        IsEnabled="{Binding PickersForNewActivityEnabled}"/>
+            <Picker Title="Categoría para Nueva Actividad"
+                    ItemsSource="{Binding CategoriasActividad}"
+                    ItemDisplayBinding="{Binding NombreCategoriaActividad}"
+                    SelectedItem="{Binding SelectedCategoriaActividad}"
+                    IsVisible="{Binding MostrarCampoNuevaActividad}"
+                    IsEnabled="{Binding PickersForNewActivityEnabled}" />
 
-                <Label Text="Unidad de Medida para Nueva Actividad:"/>
-                <Picker ItemsSource="{Binding DisponibleUniMedRe}"
-                        SelectedItem="{Binding SelectedUniMedRe}"
-                        ItemDisplayBinding="{Binding NombreUniMedRe}"
-                        Title="Seleccione unidad..."
-                        IsEnabled="{Binding PickersForNewActivityEnabled}"/>
-            </VerticalStackLayout>
+            <Picker Title="Unidad de Medida para Nueva Actividad"
+                    ItemsSource="{Binding DisponibleUniMedRe}"
+                    ItemDisplayBinding="{Binding NombreUniMedRe}"
+                    SelectedItem="{Binding SelectedUniMedRe}"
+                    IsVisible="{Binding MostrarCampoNuevaActividad}"
+                    IsEnabled="{Binding PickersForNewActivityEnabled}" />
 
-            <VerticalStackLayout IsVisible="{Binding SelectedActividad, Converter={StaticResource NonNullToBoolConverter}}">
-                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" 
-                      IsVisible="{Binding PickersForNewActivityEnabled, Converter={StaticResource InverseBoolConverter}}">
-                    <Label Grid.Row="0" Grid.Column="0" Text="Categoría (Actividad):" FontAttributes="Bold" VerticalOptions="Center"/>
-                    <Label Grid.Row="0" Grid.Column="1" Text="{Binding SelectedActividad.CategoriaActividad.NombreCategoriaActividad, FallbackValue='N/A'}" VerticalOptions="Center"/>
-
-                    <Label Grid.Row="1" Grid.Column="0" Text="Ud. Medida (Actividad):" FontAttributes="Bold" VerticalOptions="Center"/>
-                    <Label Grid.Row="1" Grid.Column="1" Text="{Binding SelectedActividad.UnidadMedida.NombreUniMedRe, FallbackValue='N/A'}" VerticalOptions="Center"/>
-                </Grid>
-            </VerticalStackLayout>
+            <Entry Placeholder="Cantidad de la Etapa"
+                   Keyboard="Numeric"
+                   Text="{Binding CantidadEtapa}" />
 
             <Button Text="Guardar Etapa"
                     Command="{Binding GuardarEtapaCommand}"
-                    IsEnabled="{Binding IsNotBusy}"/>
+                    IsEnabled="{Binding IsNotBusy}" />
 
-            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="CenterAndExpand"/>
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
 
-            <Label Text="Etapas del Presupuesto" FontSize="Medium" FontAttributes="Bold" Margin="0,20,0,10"/>
-            <CollectionView ItemsSource="{Binding Etapas}" EmptyView="No hay etapas registradas para este presupuesto.">
+            <Label Text="Etapas Registradas" FontAttributes="Bold" FontSize="Medium" Margin="0,20,0,0"/>
+            <CollectionView ItemsSource="{Binding Etapas}">
                 <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="model:Etapa">
-                        <Frame Padding="10" Margin="0,5" CornerRadius="5" BorderColor="{StaticResource Gray200}">
-                            <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto, Auto, Auto">
-                                <Label Grid.Row="0" Grid.Column="0" FontSize="Small">
+                    <DataTemplate x:DataType="models:Etapa">
+                        <Frame Padding="10" Margin="0,5" CornerRadius="5" BorderColor="LightGray">
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="5">
+                                <Label Grid.Row="0" Grid.Column="0" FontAttributes="Bold">
                                     <Label.FormattedText>
                                         <FormattedString>
-                                            <Span Text="Actividad: " FontAttributes="Bold"/>
-                                            <Span Text="{Binding Actividad.NombreActividad, FallbackValue='N/D'}"/>
-                                        </FormattedString>
-                                    </Label.FormattedText>
-                                </Label>
-                                <Label Grid.Row="1" Grid.Column="0" FontSize="Small">
-                                    <Label.FormattedText>
-                                        <FormattedString>
-                                            <Span Text="Categoría: " FontAttributes="Bold"/>
-                                            <Span Text="{Binding Actividad.CategoriaActividad.NombreCategoriaActividad, FallbackValue='N/D'}"/>
-                                        </FormattedString>
-                                    </Label.FormattedText>
-                                </Label>
-                                <Label Grid.Row="2" Grid.Column="0" FontSize="Small">
-                                    <Label.FormattedText>
-                                        <FormattedString>
-                                            <Span Text="Ud. Medida: " FontAttributes="Bold"/>
-                                            <Span Text="{Binding Actividad.UnidadMedida.NombreUniMedRe, FallbackValue='N/D'}"/>
-                                            <Span Text=" (Abrev: "/>
-                                            <Span Text="{Binding Actividad.UnidadMedida.AbreviaturaUniMedRe, FallbackValue='N/D'}"/>
-                                            <Span Text=")"/>
-                                        </FormattedString>
-                                    </Label.FormattedText>
-                                </Label>
-                                <Label Grid.Row="3" Grid.Column="0" FontSize="Small">
-                                    <Label.FormattedText>
-                                        <FormattedString>
-                                            <Span Text="Cantidad Etapa: " FontAttributes="Bold"/>
-                                            <Span Text="{Binding CantidadEtapa, FallbackValue='0'}"/>
-                                        </FormattedString>
-                                    </Label.FormattedText>
-                                </Label>
-                                <Label Grid.Row="4" Grid.Column="0" FontSize="Small">
-                                    <Label.FormattedText>
-                                        <FormattedString>
-                                            <Span Text="Monto Total (Subetapas): " FontAttributes="Bold"/>
-                                            <Span Text="{Binding MontoTotalEtapa, StringFormat='{0:C}', FallbackValue='0.00'}"/>
+                                            <Span Text="Etapa "/>
+                                            <Span Text="{Binding NumeroEtapa}"/>
+                                            <Span Text=": "/>
+                                            <Span Text="{Binding Actividad.NombreActividad}" />
                                         </FormattedString>
                                     </Label.FormattedText>
                                 </Label>
 
-                                <Button Grid.RowSpan="5" Grid.Column="1" Text="Ver/Añadir Sub-Etapas"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RegistrarEtapaViewModel}}, Path=RegistrarSubEtapaCommand}"
-                                        CommandParameter="{Binding .}"
-                                        FontSize="Micro" Padding="5" Margin="5,0,0,0" VerticalOptions="Center"/>
+                                <Button Grid.Row="0" Grid.Column="1" Text="▲" FontSize="Small" Padding="5"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarEtapaViewModel}}, Path=MoveEtapaUpCommand}"
+                                        CommandParameter="{Binding .}"/>
+                                <Button Grid.Row="0" Grid.Column="2" Text="▼" FontSize="Small" Padding="5"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarEtapaViewModel}}, Path=MoveEtapaDownCommand}"
+                                        CommandParameter="{Binding .}"/>
+
+                                <Label Grid.Row="1" Grid.Column="0">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Categoría: " FontAttributes="Italic"/>
+                                            <Span Text="{Binding Actividad.CategoriaActividad.NombreCategoriaActividad}"/>
+                                            <Span Text=" - U/M: " FontAttributes="Italic"/>
+                                            <Span Text="{Binding Actividad.UnidadMedida.NombreUniMedRe}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+
+                                <Label Grid.Row="2" Grid.Column="0">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Cantidad Etapa: " FontAttributes="Italic"/>
+                                            <Span Text="{Binding CantidadEtapa, StringFormat='{0:N2}'}"/>
+                                            <Span Text=" - Monto Total: " FontAttributes="Italic"/>
+                                            <Span Text="{Binding MontoTotalEtapa, StringFormat='C{0:C}', FallbackValue='0.00'}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+
+                                <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Text="Gestionar Sub-Etapas y Recursos"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarEtapaViewModel}}, Path=RegistrarSubEtapaCommand}"
+                                        CommandParameter="{Binding .}" Margin="0,5,0,0"/>
                             </Grid>
                         </Frame>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
+            <Label Text="No hay etapas registradas para este presupuesto."
+                   IsVisible="{Binding Etapas.Count, Converter={StaticResource InverseBoolConverter}}"
+                   HorizontalOptions="CenterAndExpand" Margin="0,10"/>
 
         </VerticalStackLayout>
     </ScrollView>

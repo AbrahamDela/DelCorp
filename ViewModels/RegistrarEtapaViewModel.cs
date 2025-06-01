@@ -53,7 +53,7 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
     [ObservableProperty]
     private bool _pickersForNewActivityEnabled;
 
-    [ObservableProperty] // Nueva propiedad para el texto de búsqueda
+    [ObservableProperty]
     private string _searchTextActividad;
 
     public bool IsNotBusy => !IsBusy;
@@ -70,23 +70,20 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
         OnPropertyChanged(nameof(IsNotBusy));
     }
 
-    // Método invocado cuando SearchTextActividad cambia
     async partial void OnSearchTextActividadChanged(string oldValue, string newValue)
     {
-        // Aquí puedes añadir un debounce si prefieres no buscar en cada tecleo.
-        // Por ahora, buscará directamente.
-        // Asumimos que la búsqueda de actividades no se filtra por la categoría seleccionada para "Nueva Actividad".
-        // Si se quisiera filtrar también por una categoría general, se necesitaría otro picker para ello.
         Debug.WriteLine($"[RegistrarEtapaVM] SearchTextActividad cambiado a: {newValue}");
-        await CargarActividadesAsync(null, newValue); // Cargar actividades filtrando por texto, sin filtro de categoría
+        await CargarActividadesAsync(null, newValue);
     }
-
 
     public async Task ActualizarEtapaConSubetapas(long idEtapa)
     {
         var etapa = Etapas.FirstOrDefault(e => e.Id == idEtapa);
         if (etapa != null)
         {
+            // Instead of just reloading everything, you might want to find the specific etapa
+            // and update its properties if only its sub-etapa related totals changed.
+            // For simplicity here, we reload all, but this can be optimized.
             await CargarEtapasAsync();
         }
     }
@@ -100,7 +97,6 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
         {
             await CargarUniMedReAsync();
             await CargarCategoriasActividadAsync();
-            // Cargar actividades inicialmente sin filtro de texto ni categoría
             await CargarActividadesAsync(null, null);
             await CargarEtapasAsync();
         }
@@ -117,7 +113,7 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
 
     private async Task CargarUniMedReAsync()
     {
-        if (DisponibleUniMedRe.Any() && !IsBusy) return;
+        if (DisponibleUniMedRe.Any() && !IsBusy) return; // Avoid reloading if already populated and not busy
         bool wasBusy = IsBusy;
         if (!wasBusy) SetIsBusy(true);
         try
@@ -163,7 +159,6 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
         }
     }
 
-    // Modificado para aceptar texto de búsqueda
     private async Task CargarActividadesAsync(long? categoriaIdFiltro, string textoBusqueda)
     {
         Debug.WriteLine($"[RegistrarEtapaVM] CargarActividadesAsync llamado con CategoriaId: {categoriaIdFiltro}, TextoBusqueda: {textoBusqueda}");
@@ -173,7 +168,6 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
         try
         {
             ActividadesDisponibles.Clear();
-            // Llamar al servicio con ambos filtros
             var actividades = await _dataService.GetActividadesAsync(categoriaIdFiltro, textoBusqueda);
 
             var categoriasCacheadas = CategoriasActividad.Any() ? CategoriasActividad.ToList() : (await _dataService.GetCategoriasActividadAsync()).ToList();
@@ -191,7 +185,6 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
                 }
                 ActividadesDisponibles.Add(act);
             }
-            // Siempre añadir la opción de registrar nueva actividad, independientemente de los resultados de búsqueda
             ActividadesDisponibles.Add(new Actividad { IdActividad = -1, NombreActividad = "Registrar nueva actividad..." });
             Debug.WriteLine($"[RegistrarEtapaVM] ActividadesDisponibles cargadas: {ActividadesDisponibles.Count} items.");
         }
@@ -206,7 +199,6 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
         }
     }
 
-
     public async Task CargarEtapasAsync()
     {
         SetIsBusy(true);
@@ -215,9 +207,10 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
             var listaEtapasDto = await _dataService.GetEtapasByPresupuestoId(IdPresupuesto);
             Etapas.Clear();
 
-            foreach (var etapa in listaEtapasDto.OrderBy(e => e.CreatedAt))
+            // Order by NumeroEtapa when initially loading
+            foreach (var etapa in listaEtapasDto.OrderBy(e => e.NumeroEtapa))
             {
-                RecalcularTotalesParaEtapa(etapa); // Llamar después de que SubEtapas estén listas.
+                RecalcularTotalesParaEtapa(etapa);
                 Etapas.Add(etapa);
             }
         }
@@ -242,6 +235,7 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
             }
             else
             {
+                // If already initialized for this budget, just refresh the stages
                 await CargarEtapasAsync();
             }
         }
@@ -260,29 +254,28 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
 
     partial void OnSelectedActividadChanged(Actividad oldValue, Actividad newValue)
     {
-        Actividad value = newValue; // Para mantener la lógica original que usa 'value'
+        Actividad value = newValue;
         if (value != null && value.IdActividad == -1)
         {
             MostrarCampoNuevaActividad = true;
             NombreNuevaActividad = string.Empty;
-            PickersForNewActivityEnabled = true;
-            SelectedCategoriaActividad = null;
-            SelectedUniMedRe = null;
+            PickersForNewActivityEnabled = true; // Allow selecting category/UOM for new activity
+            SelectedCategoriaActividad = null;  // Reset category picker for new activity
+            SelectedUniMedRe = null;            // Reset UOM picker for new activity
         }
-        else if (value != null)
+        else if (value != null) // An existing activity is selected
         {
             MostrarCampoNuevaActividad = false;
-            // NombreNuevaActividad = value.NombreActividad; // No actualizar este campo, es para nueva actividad
-            PickersForNewActivityEnabled = false;
-
+            PickersForNewActivityEnabled = false; // Disable category/UOM pickers, use activity's own
+            // Set pickers to reflect the selected activity's properties
             SelectedCategoriaActividad = _categoriasActividad.FirstOrDefault(c => c.IdCategoriaActividad == value.CategoriaActividadId);
             SelectedUniMedRe = _disponibleUniMedRe.FirstOrDefault(u => u.Id == value.UnidadMedidaId);
         }
-        else
+        else // No activity selected or selection cleared
         {
             MostrarCampoNuevaActividad = false;
             NombreNuevaActividad = string.Empty;
-            PickersForNewActivityEnabled = true;
+            PickersForNewActivityEnabled = true; // Enable pickers
             SelectedCategoriaActividad = null;
             SelectedUniMedRe = null;
         }
@@ -291,41 +284,26 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
     private void RecalcularTotalesParaEtapa(Etapa etapa)
     {
         if (etapa == null) return;
-        etapa.SubEtapas ??= new List<SubEtapa>(); // Asegurar que la lista no sea null
+        etapa.SubEtapas ??= new List<SubEtapa>();
 
-        // Calcular MontoTotalEtapa (esto ya lo tenías)
         etapa.MontoTotalEtapa = etapa.SubEtapas.Sum(s => s.TotalSubEstapa ?? 0M);
 
-        // Nueva lógica para calcular CantidadEtapa
         decimal cantidadCalculadaEtapa = 0;
-
         var subEtapasContables = etapa.SubEtapas
             .Where(s => s.Actividad?.CategoriaActividad?.EsContable == true && s.CantidadSubEtapa.HasValue)
             .ToList();
 
         if (subEtapasContables.Any())
         {
-            // Si hay al menos una subetapa contable, sumar solo las cantidades de las contables
             cantidadCalculadaEtapa = subEtapasContables.Sum(s => s.CantidadSubEtapa.Value);
         }
         else
         {
-            // Si no hay ninguna subetapa contable (o no hay subetapas),
-            // sumar las cantidades de TODAS las subetapas (si las hay).
-            // Esto cubre el caso de "acabados" donde podrías tener M2 de pintura, repello, etc.
-            // y quieres que la cantidad de la etapa refleje la suma de esas áreas/volúmenes.
             cantidadCalculadaEtapa = etapa.SubEtapas
                 .Where(s => s.CantidadSubEtapa.HasValue)
                 .Sum(s => s.CantidadSubEtapa.Value);
         }
-
         etapa.CantidadEtapa = cantidadCalculadaEtapa;
-
-        // Importante: Si Etapa.CantidadEtapa no es una [ObservableProperty] directamente en el modelo Etapa
-        // y estás mostrando esto en una CollectionView, puede que necesites forzar una actualización de la UI
-        // para ese ítem específico si la CollectionView no detecta el cambio interno.
-        // Sin embargo, si Etapas es una ObservableCollection<Etapa> y Etapa es una clase,
-        // modificar sus propiedades debería reflejarse si el DataTemplate bindea a esas propiedades.
     }
 
     [RelayCommand]
@@ -341,7 +319,7 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
             return;
         }
 
-        if (SelectedActividad.IdActividad == -1)
+        if (SelectedActividad.IdActividad == -1) // User wants to register a new activity
         {
             if (string.IsNullOrWhiteSpace(NombreNuevaActividad))
             {
@@ -367,7 +345,7 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
                 NombreActividad = NombreNuevaActividad,
                 CategoriaActividadId = SelectedCategoriaActividad.IdCategoriaActividad,
                 UnidadMedidaId = SelectedUniMedRe.Id,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow // Handled by service/DB ideally, but good for local
             };
 
             var actividadGuardada = await _dataService.SaveActividadAsync(nuevaActividadDto);
@@ -378,8 +356,7 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
                 return;
             }
             idActividadParaGuardar = actividadGuardada.IdActividad;
-            // Recargar lista de actividades para que la nueva aparezca y se pueda seleccionar sin reiniciar la página
-            await CargarActividadesAsync(null, SearchTextActividad); // Usar el texto de búsqueda actual
+            await CargarActividadesAsync(null, SearchTextActividad); // Refresh activities list
         }
         else
         {
@@ -402,28 +379,32 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
 
         try
         {
-            long nuevoIdEtapaLocal = OfflineFirstDataService.GenerarIdAleatorio();
+            long nuevoIdEtapaLocal = OfflineFirstDataService.GenerarIdAleatorio(); // Consider if this ID generation is appropriate
+            long nuevoNumeroEtapa = (Etapas.Any() ? Etapas.Max(e => e.NumeroEtapa) : 0) + 1;
 
             var etapa = new Etapa
             {
-                Id = nuevoIdEtapaLocal,
+                Id = nuevoIdEtapaLocal, // This ID might be temporary if server generates its own
                 IdActividadEtapa = idActividadParaGuardar.Value,
                 IdPresupuesto = this.IdPresupuesto,
                 CantidadEtapa = this.CantidadEtapa,
-                MontoTotalEtapa = 0,
-                NumeroEtapa = Etapas.Count + 1,
+                MontoTotalEtapa = 0, // Calculated based on sub-etapas later
+                NumeroEtapa = nuevoNumeroEtapa, // Assign new stage number
                 CreatedAt = DateTime.UtcNow
             };
 
             var etapaGuardada = await _dataService.SaveEtapa(etapa);
             if (etapaGuardada != null)
             {
+                // Reset form fields
                 SelectedActividad = null;
                 CantidadEtapa = null;
-                SearchTextActividad = string.Empty; // Limpiar búsqueda después de guardar
+                NombreNuevaActividad = string.Empty; // If a new activity was being entered
+                SearchTextActividad = string.Empty; // Clear search text
+                MostrarCampoNuevaActividad = false; // Hide new activity field
 
-                await CargarEtapasAsync();
-                await Shell.Current.DisplayAlert("Éxito", $"Etapa guardada.", "OK");
+                await CargarEtapasAsync(); // Refresh the list, which will now be sorted by NumeroEtapa
+                await Shell.Current.DisplayAlert("Éxito", $"Etapa guardada con número {etapaGuardada.NumeroEtapa}.", "OK");
             }
             else
             {
@@ -437,6 +418,59 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
         finally
         {
             SetIsBusy(false);
+        }
+    }
+
+    private async Task RenumberAndSaveEtapasAsync()
+    {
+        SetIsBusy(true);
+        try
+        {
+            for (int i = 0; i < Etapas.Count; i++)
+            {
+                var etapa = Etapas[i];
+                if (etapa.NumeroEtapa != (i + 1)) // Only save if number changed
+                {
+                    etapa.NumeroEtapa = i + 1;
+                    await _dataService.SaveEtapa(etapa);
+                }
+            }
+            // After renumbering and saving all, reload from data source to ensure sorted by new NumeroEtapa
+            await CargarEtapasAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[RegistrarEtapaVM] Error in RenumberAndSaveEtapasAsync: {ex.Message}");
+            await Shell.Current.DisplayAlert("Error", $"No se pudo reordenar las etapas: {ex.Message}", "OK");
+            await CargarEtapasAsync(); // Attempt to reload to a consistent state
+        }
+        finally
+        {
+            SetIsBusy(false);
+        }
+    }
+
+    [RelayCommand]
+    private async Task MoveEtapaUpAsync(Etapa etapa)
+    {
+        if (etapa == null) return;
+        int currentIndex = Etapas.IndexOf(etapa);
+        if (currentIndex > 0) // Can move up
+        {
+            Etapas.Move(currentIndex, currentIndex - 1);
+            await RenumberAndSaveEtapasAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task MoveEtapaDownAsync(Etapa etapa)
+    {
+        if (etapa == null) return;
+        int currentIndex = Etapas.IndexOf(etapa);
+        if (currentIndex < Etapas.Count - 1) // Can move down
+        {
+            Etapas.Move(currentIndex, currentIndex + 1);
+            await RenumberAndSaveEtapasAsync();
         }
     }
 }
