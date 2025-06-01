@@ -4,8 +4,9 @@ using CommunityToolkit.Mvvm.Input;
 using DelCorp.Models;
 using DelCorp.Services;
 using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.Messaging;
-using static DelCorp.ViewModels.RegistrarSubEtapaViewModel;
+using System.Linq;
+using System;
+using System.Diagnostics; // Para Debug.WriteLine
 
 namespace DelCorp.ViewModels;
 
@@ -14,19 +15,16 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
     private readonly IDataService _dataService;
 
     [ObservableProperty]
-    private decimal? cantidadEtapa;
+    private decimal? _cantidadEtapa;
 
     [ObservableProperty]
-    private decimal? montoTotalEtapa;
+    private int _idPresupuesto;
 
     [ObservableProperty]
-    private int idPresupuesto;
+    private bool _isBusy;
 
     [ObservableProperty]
-    private bool isBusy;
-
-    [ObservableProperty]
-    private ObservableCollection<Etapa> etapas = new();
+    private ObservableCollection<Etapa> _etapas = new();
 
     [ObservableProperty]
     private ObservableCollection<UniMedRe> _disponibleUniMedRe = new();
@@ -52,74 +50,185 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
     [ObservableProperty]
     private bool _mostrarCampoNuevaActividad;
 
+    [ObservableProperty]
+    private bool _pickersForNewActivityEnabled;
+
+    [ObservableProperty] // Nueva propiedad para el texto de búsqueda
+    private string _searchTextActividad;
+
     public bool IsNotBusy => !IsBusy;
 
     public RegistrarEtapaViewModel(IDataService dataService)
     {
         _dataService = dataService;
+        _pickersForNewActivityEnabled = true;
     }
+
+    private void SetIsBusy(bool busy)
+    {
+        IsBusy = busy;
+        OnPropertyChanged(nameof(IsNotBusy));
+    }
+
+    // Método invocado cuando SearchTextActividad cambia
+    async partial void OnSearchTextActividadChanged(string oldValue, string newValue)
+    {
+        // Aquí puedes añadir un debounce si prefieres no buscar en cada tecleo.
+        // Por ahora, buscará directamente.
+        // Asumimos que la búsqueda de actividades no se filtra por la categoría seleccionada para "Nueva Actividad".
+        // Si se quisiera filtrar también por una categoría general, se necesitaría otro picker para ello.
+        Debug.WriteLine($"[RegistrarEtapaVM] SearchTextActividad cambiado a: {newValue}");
+        await CargarActividadesAsync(null, newValue); // Cargar actividades filtrando por texto, sin filtro de categoría
+    }
+
 
     public async Task ActualizarEtapaConSubetapas(long idEtapa)
     {
-        // Si tienes una propiedad de subetapas en la etapa, recárgala aquí.
-        // O recarga la lista de etapas si es necesario.
-        await CargarEtapasAsync();
+        var etapa = Etapas.FirstOrDefault(e => e.Id == idEtapa);
+        if (etapa != null)
+        {
+            await CargarEtapasAsync();
+        }
     }
 
     private async Task Initialize(int presupuestoId)
     {
         IdPresupuesto = presupuestoId;
-        System.Diagnostics.Debug.WriteLine($"Se inicio con el id: {IdPresupuesto}");
-        await CargarUniMedReAsync();
-        await CargarCategoriasActividadAsync(); // Cargar categorías primero
-        // CargarActividadesAsync se llamará cuando cambie SelectedCategoriaActividad
-        // o podrías cargar todas inicialmente si no hay categorías o si es preferible
-        // await CargarActividadesAsync(null); // Para cargar todas inicialmente
-        await CargarEtapasAsync();
+        Debug.WriteLine($"[RegistrarEtapaVM] Inicializando con IdPresupuesto: {IdPresupuesto}");
+        SetIsBusy(true);
+        try
+        {
+            await CargarUniMedReAsync();
+            await CargarCategoriasActividadAsync();
+            // Cargar actividades inicialmente sin filtro de texto ni categoría
+            await CargarActividadesAsync(null, null);
+            await CargarEtapasAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[RegistrarEtapaVM] Error en Initialize: {ex.Message}");
+            await Shell.Current.DisplayAlert("Error de Inicialización", ex.Message, "OK");
+        }
+        finally
+        {
+            SetIsBusy(false);
+        }
     }
 
     private async Task CargarUniMedReAsync()
     {
-        IsBusy = true;
+        if (DisponibleUniMedRe.Any() && !IsBusy) return;
+        bool wasBusy = IsBusy;
+        if (!wasBusy) SetIsBusy(true);
         try
         {
-            var unidades = await _dataService.GetUniMedReAsync(); //
+            var unidades = await _dataService.GetUniMedReAsync();
             DisponibleUniMedRe.Clear();
-            foreach (var unidad in unidades)
+            foreach (var unidad in unidades.OrderBy(u => u.NombreUniMedRe))
             {
                 DisponibleUniMedRe.Add(unidad);
             }
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error", $"No se pudo cargar las unidades de medida: {ex.Message}", "OK");
+            await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar las unidades de medida: {ex.Message}", "OK");
         }
         finally
         {
-            IsBusy = false; // Asegúrate de que IsBusy se establezca en false en todos los caminos
+            if (!wasBusy) SetIsBusy(false);
         }
     }
 
-    public async Task CargarEtapasAsync()
+    private async Task CargarCategoriasActividadAsync()
     {
-        IsBusy = true;
+        if (CategoriasActividad.Any() && !IsBusy) return;
+        bool wasBusy = IsBusy;
+        if (!wasBusy) SetIsBusy(true);
         try
         {
-            var lista = await _dataService.GetEtapasByPresupuestoId(IdPresupuesto);
-            Etapas.Clear();
-            foreach (var etapa in lista.OrderBy(e => e.CreatedAt))
+            var categorias = await _dataService.GetCategoriasActividadAsync();
+            CategoriasActividad.Clear();
+            foreach (var cat in categorias.OrderBy(c => c.NombreCategoriaActividad))
             {
-                RecalcularTotalesParaEtapa(etapa); // Asegurar que los totales estén bien después de cargar
+                CategoriasActividad.Add(cat);
+            }
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar las categorías de actividad: {ex.Message}", "OK");
+        }
+        finally
+        {
+            if (!wasBusy) SetIsBusy(false);
+        }
+    }
+
+    // Modificado para aceptar texto de búsqueda
+    private async Task CargarActividadesAsync(long? categoriaIdFiltro, string textoBusqueda)
+    {
+        Debug.WriteLine($"[RegistrarEtapaVM] CargarActividadesAsync llamado con CategoriaId: {categoriaIdFiltro}, TextoBusqueda: {textoBusqueda}");
+        bool wasBusy = IsBusy;
+        if (!wasBusy) SetIsBusy(true);
+
+        try
+        {
+            ActividadesDisponibles.Clear();
+            // Llamar al servicio con ambos filtros
+            var actividades = await _dataService.GetActividadesAsync(categoriaIdFiltro, textoBusqueda);
+
+            var categoriasCacheadas = CategoriasActividad.Any() ? CategoriasActividad.ToList() : (await _dataService.GetCategoriasActividadAsync()).ToList();
+            var unidadesMedidaCacheadas = DisponibleUniMedRe.Any() ? DisponibleUniMedRe.ToList() : (await _dataService.GetUniMedReAsync()).ToList();
+
+            foreach (var act in actividades.OrderBy(a => a.NombreActividad))
+            {
+                if (act.CategoriaActividadId.HasValue && act.CategoriaActividad == null)
+                {
+                    act.CategoriaActividad = categoriasCacheadas.FirstOrDefault(c => c.IdCategoriaActividad == act.CategoriaActividadId.Value);
+                }
+                if (act.UnidadMedidaId.HasValue && act.UnidadMedida == null)
+                {
+                    act.UnidadMedida = unidadesMedidaCacheadas.FirstOrDefault(u => u.Id == act.UnidadMedidaId.Value);
+                }
+                ActividadesDisponibles.Add(act);
+            }
+            // Siempre añadir la opción de registrar nueva actividad, independientemente de los resultados de búsqueda
+            ActividadesDisponibles.Add(new Actividad { IdActividad = -1, NombreActividad = "Registrar nueva actividad..." });
+            Debug.WriteLine($"[RegistrarEtapaVM] ActividadesDisponibles cargadas: {ActividadesDisponibles.Count} items.");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[RegistrarEtapaVM] Error en CargarActividadesAsync: {ex.Message}");
+            await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar las actividades: {ex.Message}", "OK");
+        }
+        finally
+        {
+            if (!wasBusy) SetIsBusy(false);
+        }
+    }
+
+
+    public async Task CargarEtapasAsync()
+    {
+        SetIsBusy(true);
+        try
+        {
+            var listaEtapasDto = await _dataService.GetEtapasByPresupuestoId(IdPresupuesto);
+            Etapas.Clear();
+
+            foreach (var etapa in listaEtapasDto.OrderBy(e => e.CreatedAt))
+            {
+                RecalcularTotalesParaEtapa(etapa); // Llamar después de que SubEtapas estén listas.
                 Etapas.Add(etapa);
             }
         }
         catch (Exception ex)
         {
-            await Shell.Current.DisplayAlert("Error", $"No se pudo cargar las etapas: {ex.Message}", "OK");
+            await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar las etapas: {ex.Message}", "OK");
+            System.Diagnostics.Debug.WriteLine($"[RegistrarEtapaVM.CargarEtapasAsync] Error: {ex.Message}");
         }
         finally
         {
-            IsBusy = false;
+            SetIsBusy(false);
         }
     }
 
@@ -131,9 +240,9 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
             {
                 await Initialize(presupuestoId);
             }
-            else // Si el ID es el mismo, pero podríamos necesitar refrescar (ej. al volver)
+            else
             {
-                await CargarEtapasAsync(); // Podría ser una opción si OnAppearing no es suficiente
+                await CargarEtapasAsync();
             }
         }
     }
@@ -149,201 +258,177 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
         await Shell.Current.GoToAsync($"RegistrarSubEtapaPage?idEtapa={etapa.Id}");
     }
 
-    // Método invocado cuando SelectedCategoriaActividad cambia
-    async partial void OnSelectedCategoriaActividadChanged(CategoriaActividad value)
+    partial void OnSelectedActividadChanged(Actividad oldValue, Actividad newValue)
     {
-        await CargarActividadesAsync(value?.IdCategoriaActividad);
-        SelectedActividad = null; // Resetea la actividad seleccionada
-        NombreNuevaActividad = string.Empty; // Limpia el campo de nueva actividad
-        MostrarCampoNuevaActividad = false; // Oculta el campo
-    }
-
-    // Método invocado cuando SelectedActividad cambia
-    partial void OnSelectedActividadChanged(Actividad value)
-    {
-        if (value != null && value.IdActividad == -1) // Asumimos que IdActividad = -1 es el placeholder "Otra..."
+        Actividad value = newValue; // Para mantener la lógica original que usa 'value'
+        if (value != null && value.IdActividad == -1)
         {
             MostrarCampoNuevaActividad = true;
             NombreNuevaActividad = string.Empty;
+            PickersForNewActivityEnabled = true;
+            SelectedCategoriaActividad = null;
+            SelectedUniMedRe = null;
+        }
+        else if (value != null)
+        {
+            MostrarCampoNuevaActividad = false;
+            // NombreNuevaActividad = value.NombreActividad; // No actualizar este campo, es para nueva actividad
+            PickersForNewActivityEnabled = false;
+
+            SelectedCategoriaActividad = _categoriasActividad.FirstOrDefault(c => c.IdCategoriaActividad == value.CategoriaActividadId);
+            SelectedUniMedRe = _disponibleUniMedRe.FirstOrDefault(u => u.Id == value.UnidadMedidaId);
         }
         else
         {
             MostrarCampoNuevaActividad = false;
-            if (value != null)
-            {
-                NombreNuevaActividad = value.NombreActividad; // Opcional: rellenar el campo de texto
-            }
-        }
-    }
-
-    private async Task CargarCategoriasActividadAsync()
-    {
-        if (IsBusy && CategoriasActividad.Any()) return;
-        IsBusy = true;
-        try
-        {
-            var categorias = await _dataService.GetCategoriasActividadAsync();
-            CategoriasActividad.Clear();
-            foreach (var cat in categorias.OrderBy(c => c.NombreCategoriaActividad))
-            {
-                CategoriasActividad.Add(cat);
-            }
-        }
-        catch (System.Exception ex)
-        {
-            await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar las categorías de actividad: {ex.Message}", "OK");
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    private async Task CargarActividadesAsync(long? categoriaId)
-    {
-        // No establecer IsBusy aquí si es llamado por OnSelectedCategoriaActividadChanged,
-        // ya que CargarCategoriasActividadAsync ya maneja IsBusy.
-        // Si se llama independientemente, sí gestionar IsBusy.
-        // bool DueloDeIsBusy = IsBusy; if (!DueloDeIsBusy) IsBusy = true;
-        try
-        {
-            ActividadesDisponibles.Clear();
-            if (categoriaId.HasValue)
-            {
-                var actividades = await _dataService.GetActividadesAsync(categoriaId.Value);
-                foreach (var act in actividades.OrderBy(a => a.NombreActividad))
-                {
-                    ActividadesDisponibles.Add(act);
-                }
-            }
-            // Añadir una opción placeholder para "Otra actividad..." si lo deseas
-            // Esto requiere que tu Picker pueda manejar un tipo diferente o un valor especial.
-            // Por simplicidad, asumiremos que si no se selecciona nada y se escribe en NombreNuevaActividad, es nueva.
-            // O puedes añadir un objeto Actividad con un ID especial (ej. -1) a la lista.
-            ActividadesDisponibles.Add(new Actividad { IdActividad = -1, NombreActividad = "Registrar nueva actividad..." });
-        }
-        catch (System.Exception ex)
-        {
-            await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar las actividades: {ex.Message}", "OK");
-        }
-        finally
-        {
-            // if (!DueloDeIsBusy) IsBusy = false;
-        }
-    }
-
-    public async Task ActualizarCalculosEtapa(long idEtapa)
-    {
-        var etapaAActualizar = Etapas.FirstOrDefault(e => e.Id == idEtapa);
-        if (etapaAActualizar != null)
-        {
-            var subEtapasActualizadas = await _dataService.GetSubEtapasByEtapaId(idEtapa);
-            etapaAActualizar.SubEtapas = subEtapasActualizadas.ToList();
-            RecalcularTotalesParaEtapa(etapaAActualizar);
-            // Forzar actualización de UI si es necesario
+            NombreNuevaActividad = string.Empty;
+            PickersForNewActivityEnabled = true;
+            SelectedCategoriaActividad = null;
+            SelectedUniMedRe = null;
         }
     }
 
     private void RecalcularTotalesParaEtapa(Etapa etapa)
     {
         if (etapa == null) return;
-        etapa.SubEtapas ??= new List<SubEtapa>();
+        etapa.SubEtapas ??= new List<SubEtapa>(); // Asegurar que la lista no sea null
 
+        // Calcular MontoTotalEtapa (esto ya lo tenías)
         etapa.MontoTotalEtapa = etapa.SubEtapas.Sum(s => s.TotalSubEstapa ?? 0M);
-        etapa.CantidadEtapa = etapa.SubEtapas.Sum(s => s.CantidadSubEtapa ?? 0M); // Ajustar si se implementa selectividad
+
+        // Nueva lógica para calcular CantidadEtapa
+        decimal cantidadCalculadaEtapa = 0;
+
+        var subEtapasContables = etapa.SubEtapas
+            .Where(s => s.Actividad?.CategoriaActividad?.EsContable == true && s.CantidadSubEtapa.HasValue)
+            .ToList();
+
+        if (subEtapasContables.Any())
+        {
+            // Si hay al menos una subetapa contable, sumar solo las cantidades de las contables
+            cantidadCalculadaEtapa = subEtapasContables.Sum(s => s.CantidadSubEtapa.Value);
+        }
+        else
+        {
+            // Si no hay ninguna subetapa contable (o no hay subetapas),
+            // sumar las cantidades de TODAS las subetapas (si las hay).
+            // Esto cubre el caso de "acabados" donde podrías tener M2 de pintura, repello, etc.
+            // y quieres que la cantidad de la etapa refleje la suma de esas áreas/volúmenes.
+            cantidadCalculadaEtapa = etapa.SubEtapas
+                .Where(s => s.CantidadSubEtapa.HasValue)
+                .Sum(s => s.CantidadSubEtapa.Value);
+        }
+
+        etapa.CantidadEtapa = cantidadCalculadaEtapa;
+
+        // Importante: Si Etapa.CantidadEtapa no es una [ObservableProperty] directamente en el modelo Etapa
+        // y estás mostrando esto en una CollectionView, puede que necesites forzar una actualización de la UI
+        // para ese ítem específico si la CollectionView no detecta el cambio interno.
+        // Sin embargo, si Etapas es una ObservableCollection<Etapa> y Etapa es una clase,
+        // modificar sus propiedades debería reflejarse si el DataTemplate bindea a esas propiedades.
     }
 
     [RelayCommand]
     public async Task GuardarEtapaAsync()
     {
-        long? idActividadParaGuardar = SelectedActividad?.IdActividad;
+        SetIsBusy(true);
+        long? idActividadParaGuardar = null;
 
-        if (SelectedActividad != null && SelectedActividad.IdActividad == -1) // "Registrar nueva actividad..."
+        if (SelectedActividad == null)
+        {
+            await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una actividad para la etapa.", "OK");
+            SetIsBusy(false);
+            return;
+        }
+
+        if (SelectedActividad.IdActividad == -1)
         {
             if (string.IsNullOrWhiteSpace(NombreNuevaActividad))
             {
-                await Shell.Current.DisplayAlert("Error", "El nombre de la nueva actividad es obligatorio.", "OK");
+                await Shell.Current.DisplayAlert("Validación", "El nombre de la nueva actividad es obligatorio.", "OK");
+                SetIsBusy(false);
                 return;
             }
-            // Crear y guardar la nueva actividad
+            if (SelectedCategoriaActividad == null)
+            {
+                await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una categoría para la nueva actividad.", "OK");
+                SetIsBusy(false);
+                return;
+            }
+            if (SelectedUniMedRe == null)
+            {
+                await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una unidad de medida para la nueva actividad.", "OK");
+                SetIsBusy(false);
+                return;
+            }
+
             var nuevaActividadDto = new Actividad
             {
                 NombreActividad = NombreNuevaActividad,
-                CategoriaActividadId = SelectedCategoriaActividad?.IdCategoriaActividad
-                // Asegúrate que SelectedCategoriaActividad esté disponible y sea correcto
+                CategoriaActividadId = SelectedCategoriaActividad.IdCategoriaActividad,
+                UnidadMedidaId = SelectedUniMedRe.Id,
+                CreatedAt = DateTime.UtcNow
             };
+
             var actividadGuardada = await _dataService.SaveActividadAsync(nuevaActividadDto);
             if (actividadGuardada == null || actividadGuardada.IdActividad == 0)
             {
-                await Shell.Current.DisplayAlert("Error", "No se pudo guardar la nueva actividad. Intente seleccionar una existente o verifique la conexión.", "OK");
+                await Shell.Current.DisplayAlert("Error", "No se pudo guardar la nueva actividad. Verifique los datos o la conexión.", "OK");
+                SetIsBusy(false);
                 return;
             }
             idActividadParaGuardar = actividadGuardada.IdActividad;
-            // Opcional: Recargar actividades para incluir la nueva en el picker
-            // await CargarActividadesAsync(SelectedCategoriaActividad?.IdCategoriaActividad);
+            // Recargar lista de actividades para que la nueva aparezca y se pueda seleccionar sin reiniciar la página
+            await CargarActividadesAsync(null, SearchTextActividad); // Usar el texto de búsqueda actual
         }
-        else if (SelectedActividad == null && !string.IsNullOrWhiteSpace(NombreNuevaActividad))
+        else
         {
-            // El usuario no seleccionó del picker pero escribió un nombre.
-            // Podrías buscar si ya existe una actividad con ese nombre o directamente crearla.
-            // Por simplicidad, si escribió y no seleccionó "Otra", asumimos que quiere una actividad existente
-            // o que el flujo es seleccionar "Otra" para crear.
-            // Aquí, si SelectedActividad es null pero hay texto, es ambiguo.
-            // Para que funcione como "escribirla si no existe", el flujo debería ser:
-            // 1. Escribe en NombreNuevaActividad
-            // 2. (Opcional) Picker de Actividad se filtra o muestra "Crear nueva: [NombreNuevaActividad]"
-            // 3. Al guardar, si no hay SelectedActividad pero hay NombreNuevaActividad, se intenta crear.
-            // La lógica actual con el placeholder IdActividad=-1 es más explícita.
-            await Shell.Current.DisplayAlert("Error", "Seleccione una actividad de la lista o elija 'Registrar nueva actividad...' y escriba el nombre.", "OK");
+            idActividadParaGuardar = SelectedActividad.IdActividad;
+        }
+
+        if (!idActividadParaGuardar.HasValue || idActividadParaGuardar.Value == 0)
+        {
+            await Shell.Current.DisplayAlert("Error", "No se pudo determinar la actividad para la etapa.", "OK");
+            SetIsBusy(false);
             return;
         }
 
-
-        if (!idActividadParaGuardar.HasValue || idActividadParaGuardar.Value == 0 || (idActividadParaGuardar.Value == -1 && string.IsNullOrWhiteSpace(NombreNuevaActividad)))
+        if (CantidadEtapa == null || CantidadEtapa <= 0)
         {
-            await Shell.Current.DisplayAlert("Error", "La actividad es obligatoria. Seleccione una o registre una nueva.", "OK");
+            await Shell.Current.DisplayAlert("Validación", "La cantidad para la etapa debe ser un valor positivo.", "OK");
+            SetIsBusy(false);
             return;
         }
 
-        if (SelectedUniMedRe == null)
-        {
-            await Shell.Current.DisplayAlert("Error", "Debe seleccionar una Unidad de Medida.", "OK");
-            return;
-        }
-
-        IsBusy = true;
         try
         {
-            // ... (lógica para generar nuevoId de etapa) ...
-            var etapasExistentes = await _dataService.GetEtapasByPresupuestoId(IdPresupuesto);
-            var idsExistentes = etapasExistentes.Select(e => e.Id).ToHashSet();
-            long nuevoId;
-            var random = new Random();
-            do
-            {
-                nuevoId = random.NextInt64(1_000_000, 9_999_999_999);
-            } while (idsExistentes.Contains(nuevoId));
+            long nuevoIdEtapaLocal = OfflineFirstDataService.GenerarIdAleatorio();
 
             var etapa = new Etapa
             {
-                Id = nuevoId,
-                IdActividadEtapa = idActividadParaGuardar, // Usar el ID de la actividad
+                Id = nuevoIdEtapaLocal,
+                IdActividadEtapa = idActividadParaGuardar.Value,
                 IdPresupuesto = this.IdPresupuesto,
-                IdUniMedida = this.SelectedUniMedRe.Id,
-                CreatedAt = DateTime.UtcNow,
-                MontoTotalEtapa = 0, // Inicialmente 0
-                CantidadEtapa = 0   // Inicialmente 0
+                CantidadEtapa = this.CantidadEtapa,
+                MontoTotalEtapa = 0,
+                NumeroEtapa = Etapas.Count + 1,
+                CreatedAt = DateTime.UtcNow
             };
 
-            await _dataService.SaveEtapa(etapa);
+            var etapaGuardada = await _dataService.SaveEtapa(etapa);
+            if (etapaGuardada != null)
+            {
+                SelectedActividad = null;
+                CantidadEtapa = null;
+                SearchTextActividad = string.Empty; // Limpiar búsqueda después de guardar
 
-            // Limpiar campos
-            SelectedCategoriaActividad = null; // Esto debería disparar OnSelectedCategoriaActividadChanged y limpiar actividades
-            // SelectedActividad ya se limpia en OnSelectedCategoriaActividadChanged
-            // NombreNuevaActividad ya se limpia en OnSelectedCategoriaActividadChanged
-            SelectedUniMedRe = null;
-
-            await CargarEtapasAsync();
+                await CargarEtapasAsync();
+                await Shell.Current.DisplayAlert("Éxito", $"Etapa guardada.", "OK");
+            }
+            else
+            {
+                await Shell.Current.DisplayAlert("Error", "No se pudo guardar la etapa.", "OK");
+            }
         }
         catch (Exception ex)
         {
@@ -351,7 +436,7 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
         }
         finally
         {
-            IsBusy = false;
+            SetIsBusy(false);
         }
     }
 }

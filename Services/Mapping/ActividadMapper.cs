@@ -80,8 +80,8 @@ namespace DelCorp.Services.Mapping
                 IdActividad = supabase.IdActividad,
                 CreatedAt = supabase.CreatedAt,
                 NombreActividad = supabase.NombreActividad,
-                CategoriaActividadId = supabase.CategoriaActividadId
-                // CategoriaActividad se poblará por separado si es necesario
+                CategoriaActividadId = supabase.CategoriaActividadId,
+                UnidadMedidaId = supabase.UnidadMedidaId
             };
         }
 
@@ -94,8 +94,8 @@ namespace DelCorp.Services.Mapping
                 IdActividad = local.IdActividad,
                 CreatedAt = local.CreatedAt,
                 NombreActividad = local.NombreActividad,
-                CategoriaActividadId = local.CategoriaActividadId
-                // CategoriaActividad se poblará por separado
+                CategoriaActividadId = local.CategoriaActividadId,
+                UnidadMedidaId = local.UnidadMedidaId
             };
         }
 
@@ -108,7 +108,8 @@ namespace DelCorp.Services.Mapping
                 IdActividad = (dto.IdActividad == 0 && dto.CreatedAt == default(DateTime)) ? default(long) : dto.IdActividad, // Para inserciones nuevas, el ID lo genera Supabase
                 CreatedAt = dto.CreatedAt,
                 NombreActividad = dto.NombreActividad,
-                CategoriaActividadId = dto.CategoriaActividadId
+                CategoriaActividadId = dto.CategoriaActividadId,
+                UnidadMedidaId = dto.UnidadMedidaId
             };
         }
 
@@ -125,7 +126,8 @@ namespace DelCorp.Services.Mapping
                 // CreatedAt no se envía para inserciones nuevas si la DB lo autogenera y es default.
                 // NombreActividad y CategoriaActividadId siempre se envían.
                 NombreActividad = dto.NombreActividad,
-                CategoriaActividadId = dto.CategoriaActividadId
+                CategoriaActividadId = dto.CategoriaActividadId,
+                UnidadMedidaId = dto.UnidadMedidaId
             };
         }
 
@@ -140,6 +142,7 @@ namespace DelCorp.Services.Mapping
                 CreatedAt = dto.CreatedAt,
                 NombreActividad = dto.NombreActividad,
                 CategoriaActividadId = dto.CategoriaActividadId,
+                UnidadMedidaId = dto.UnidadMedidaId,
                 IsSynced = isSynced
             };
         }

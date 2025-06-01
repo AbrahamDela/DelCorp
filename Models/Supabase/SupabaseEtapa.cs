@@ -33,6 +33,4 @@ public class SupabaseEtapa : BaseModel
     public decimal? ProgresoEtapa { get; set; }
     [Column("id_presupuesto")]
     public long IdPresupuesto { get; set; }
-    [Column("id_uni_medida")]
-    public long? IdUniMedida { get; set; }
 }

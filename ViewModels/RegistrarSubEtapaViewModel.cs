@@ -1,11 +1,13 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 using DelCorp.Models;
 using DelCorp.Services;
 using DelCorp.Views;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using System.Linq;
+using System.Diagnostics;
+using System;
 
 namespace DelCorp.ViewModels;
 
@@ -13,83 +15,150 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
 {
     private readonly IDataService _dataService;
 
-    [ObservableProperty] private long idEtapa;
-    [ObservableProperty] private decimal? cantidadSubEtapa;
-    [ObservableProperty] private decimal? precioUniSubEtapa;
-    [ObservableProperty] private decimal? precioUniEjeSubEtapa;
-    //[ObservableProperty] private decimal? totalSubEstapa;
-    [ObservableProperty] private decimal? montoEjeSubEtapa;
-    [ObservableProperty] private long? diasCalSubEtapa;
-    [ObservableProperty] private long? diasEjeSubEtapa;
-    [ObservableProperty] private long? idUniMedida;
-    [ObservableProperty] private ObservableCollection<SubEtapa> subEtapas = new();
-    [ObservableProperty] private bool isBusy;
+    [ObservableProperty] private long _idEtapa;
 
-    [ObservableProperty]
-    private ObservableCollection<UniMedRe> _disponibleUniMedRe = new();
+    // Campo de entrada principal para la SubEtapa, además de la Actividad
+    [ObservableProperty] private decimal? _cantidadSubEtapa; // El usuario ingresa esto
 
-    [ObservableProperty]
-    private UniMedRe _selectedUniMedRe;
+    // Campos que se calculan o se actualizan desde la página de recursos
+    [ObservableProperty] private decimal? _precioUniSubEtapa; // Se calculará (Total / Cantidad)
+    [ObservableProperty] private decimal? _totalSubEstapa;    // Se actualizará desde recursos
+
+    // Campo de entrada numérica directa
+    [ObservableProperty] private long? _diasCalSubEtapa;
+
+    // Otros campos (si son necesarios y editables, de lo contrario, se pueden quitar del formulario)
+    // [ObservableProperty] private decimal? _precioUniEjeSubEtapa;
+    // [ObservableProperty] private decimal? _montoEjeSubEtapa;
+    // [ObservableProperty] private long? _diasEjeSubEtapa;
+
+
+    [ObservableProperty] private ObservableCollection<SubEtapa> _subEtapas = new();
+    [ObservableProperty] private bool _isBusy;
 
     [ObservableProperty]
     private ObservableCollection<CategoriaActividad> _categoriasActividad = new();
-
     [ObservableProperty]
     private CategoriaActividad _selectedCategoriaActividad;
-
     [ObservableProperty]
     private ObservableCollection<Actividad> _actividadesDisponibles = new();
-
     [ObservableProperty]
     private Actividad _selectedActividad;
 
     [ObservableProperty]
     private string _nombreNuevaActividad;
-
     [ObservableProperty]
     private bool _mostrarCampoNuevaActividad;
 
-    //public record SubEtapaRegistradaMessage(long IdEtapa);
+    [ObservableProperty]
+    private string _unidadMedidaActividadSeleccionada;
 
+    [ObservableProperty]
+    private bool _pickersForNewActivityEnabled;
 
     public bool IsNotBusy => !IsBusy;
+
+    private void SetIsBusy(bool busy)
+    {
+        IsBusy = busy;
+    }
 
     public RegistrarSubEtapaViewModel(IDataService dataService)
     {
         _dataService = dataService;
+        PickersForNewActivityEnabled = true;
     }
 
-    // Método invocado cuando SelectedCategoriaActividad cambia
-    async partial void OnSelectedCategoriaActividadChanged(CategoriaActividad value)
+    async partial void OnSelectedCategoriaActividadChanged(CategoriaActividad oldValue, CategoriaActividad newValue)
     {
-        await CargarActividadesAsync(value?.IdCategoriaActividad);
-        SelectedActividad = null;
-        NombreNuevaActividad = string.Empty;
-        MostrarCampoNuevaActividad = false;
+        // Lógica si es necesaria
     }
 
-    // Método invocado cuando SelectedActividad cambia
-    partial void OnSelectedActividadChanged(Actividad value)
+    partial void OnSelectedActividadChanged(Actividad oldValue, Actividad newValue)
     {
-        if (value != null && value.IdActividad == -1) // Asumimos que IdActividad = -1 es el placeholder "Otra..."
+        Actividad value = newValue;
+        if (value != null && value.IdActividad == -1)
         {
             MostrarCampoNuevaActividad = true;
             NombreNuevaActividad = string.Empty;
+            UnidadMedidaActividadSeleccionada = string.Empty;
+            PickersForNewActivityEnabled = true;
+        }
+        else if (value != null)
+        {
+            MostrarCampoNuevaActividad = false;
+            PickersForNewActivityEnabled = false;
+            UnidadMedidaActividadSeleccionada = value.UnidadMedida?.NombreUniMedRe ?? "N/D";
+            if (string.IsNullOrEmpty(UnidadMedidaActividadSeleccionada) || UnidadMedidaActividadSeleccionada == "N/D")
+            {
+                if (value.UnidadMedidaId.HasValue)
+                {
+                    Task.Run(async () => {
+                        // Asegurarse que _dataService esté disponible y no sea null
+                        if (_dataService != null)
+                        {
+                            var um = (await _dataService.GetUniMedReAsync()).FirstOrDefault(u => u.Id == value.UnidadMedidaId.Value);
+                            if (um != null)
+                            {
+                                MainThread.BeginInvokeOnMainThread(() => {
+                                    UnidadMedidaActividadSeleccionada = um.NombreUniMedRe;
+                                });
+                            }
+                        }
+                    });
+                }
+            }
         }
         else
         {
             MostrarCampoNuevaActividad = false;
-            if (value != null)
+            NombreNuevaActividad = string.Empty;
+            UnidadMedidaActividadSeleccionada = string.Empty;
+            PickersForNewActivityEnabled = true;
+        }
+    }
+
+    public async void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        if (query.TryGetValue("idEtapa", out var idObj) && long.TryParse(idObj.ToString(), out var etapaIdVal))
+        {
+            bool needsFullLoad = (IdEtapa != etapaIdVal || !SubEtapas.Any());
+            IdEtapa = etapaIdVal;
+            if (needsFullLoad)
             {
-                NombreNuevaActividad = value.NombreActividad;
+                await CargarDatosInicialesAsync();
             }
+            else
+            {
+                await CargarSubEtapasAsync();
+            }
+        }
+    }
+
+    private async Task CargarDatosInicialesAsync()
+    {
+        SetIsBusy(true);
+        try
+        {
+            await CargarCategoriasActividadAsync();
+            await CargarActividadesAsync(null, null);
+            await CargarSubEtapasAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[RegistrarSubEtapaVM.CargarDatosInicialesAsync] Error: {ex.Message}");
+            await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar los datos iniciales: {ex.Message}", "OK");
+        }
+        finally
+        {
+            SetIsBusy(false);
         }
     }
 
     private async Task CargarCategoriasActividadAsync()
     {
-        if (IsBusy && CategoriasActividad.Any()) return;
-        IsBusy = true; // Control de IsBusy
+        bool wasBusy = IsBusy;
+        if (!wasBusy) SetIsBusy(true);
         try
         {
             var categorias = await _dataService.GetCategoriasActividadAsync();
@@ -105,23 +174,33 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         }
         finally
         {
-            IsBusy = false; // Control de IsBusy
+            if (!wasBusy) SetIsBusy(false);
         }
     }
 
-    private async Task CargarActividadesAsync(long? categoriaId)
+    private async Task CargarActividadesAsync(long? categoriaIdFiltro, string textoBusqueda)
     {
-        // bool DueloDeIsBusy = IsBusy; if (!DueloDeIsBusy) IsBusy = true; // Manejar IsBusy si es necesario
+        bool wasBusy = IsBusy;
+        if (!wasBusy) SetIsBusy(true);
         try
         {
             ActividadesDisponibles.Clear();
-            if (categoriaId.HasValue)
+            var actividades = await _dataService.GetActividadesAsync(categoriaIdFiltro, textoBusqueda);
+
+            var todasUnidades = (await _dataService.GetUniMedReAsync()).ToList();
+            var todasCategorias = CategoriasActividad.Any() ? CategoriasActividad.ToList() : (await _dataService.GetCategoriasActividadAsync()).ToList();
+
+            foreach (var act in actividades.OrderBy(a => a.NombreActividad))
             {
-                var actividades = await _dataService.GetActividadesAsync(categoriaId.Value);
-                foreach (var act in actividades.OrderBy(a => a.NombreActividad))
+                if (act.UnidadMedidaId.HasValue && act.UnidadMedida == null)
                 {
-                    ActividadesDisponibles.Add(act);
+                    act.UnidadMedida = todasUnidades.FirstOrDefault(u => u.Id == act.UnidadMedidaId.Value);
                 }
+                if (act.CategoriaActividadId.HasValue && act.CategoriaActividad == null)
+                {
+                    act.CategoriaActividad = todasCategorias.FirstOrDefault(c => c.IdCategoriaActividad == act.CategoriaActividadId.Value);
+                }
+                ActividadesDisponibles.Add(act);
             }
             ActividadesDisponibles.Add(new Actividad { IdActividad = -1, NombreActividad = "Registrar nueva actividad..." });
         }
@@ -131,148 +210,132 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         }
         finally
         {
-            // if (!DueloDeIsBusy) IsBusy = false;
+            if (!wasBusy) SetIsBusy(false);
         }
     }
 
-    public async void ApplyQueryAttributes(IDictionary<string, object> query)
-    {
-        if (query.TryGetValue("idEtapa", out var idObj) && long.TryParse(idObj.ToString(), out var etapaIdVal))
-        {
-            if (IdEtapa != etapaIdVal || !SubEtapas.Any())
-            {
-                IdEtapa = etapaIdVal;
-                await CargarDatosInicialesAsync();
-            }
-            // Si se navega de vuelta y un recurso cambió (actualizando TotalSubEstapa),
-            // necesitamos refrescar la lista de subetapas. OnAppearing en la Page es mejor para esto.
-            else if (IdEtapa == etapaIdVal) // Volviendo a la misma etapa, refrescar
-            {
-                await CargarSubEtapasAsync();
-            }
-        }
-    }
+    // Se actualiza cuando TotalSubEstapa (desde recursos) o CantidadSubEtapa (ingresada por usuario) cambian.
+    partial void OnTotalSubEstapaChanged(decimal? oldValue, decimal? newValue) => RecalcularPrecioUnitarioSubEtapa();
+    partial void OnCantidadSubEtapaChanged(decimal? oldValue, decimal? newValue) => RecalcularPrecioUnitarioSubEtapa();
 
-    private async Task CargarDatosInicialesAsync()
+    private void RecalcularPrecioUnitarioSubEtapa()
     {
-        // Cargar UniMedRe y Actividades/Categorías es para los campos de ENTRADA de una NUEVA subetapa
-        await CargarUniMedReAsync();
-        await CargarCategoriasActividadAsync();
-        // CargarActividadesAsync se llamará cuando SelectedCategoriaActividad cambie
-
-        // CargarSubEtapasAsync es para la LISTA de subetapas existentes de la etapa actual
-        await CargarSubEtapasAsync();
-    }
-
-    private async Task CargarUniMedReAsync()
-    {
-        // Optimización: no recargar si ya está ocupado o si ya hay datos y no se espera que cambien frecuentemente.
-        if (IsBusy && DisponibleUniMedRe.Any()) return;
-        IsBusy = true;
-        try
+        if (CantidadSubEtapa.HasValue && CantidadSubEtapa.Value != 0 && TotalSubEstapa.HasValue)
         {
-            var unidades = await _dataService.GetUniMedReAsync(); //
-            DisponibleUniMedRe.Clear();
-            foreach (var unidad in unidades.OrderBy(u => u.NombreUniMedRe)) // Ordenar para el Picker
-            {
-                DisponibleUniMedRe.Add(unidad);
-            }
+            PrecioUniSubEtapa = TotalSubEstapa.Value / CantidadSubEtapa.Value;
         }
-        catch (System.Exception ex)
+        else
         {
-            await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar las unidades de medida: {ex.Message}", "OK");
+            PrecioUniSubEtapa = null; // o 0
         }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    partial void OnSelectedUniMedReChanged(UniMedRe value)
-    {
-        IdUniMedida = value?.Id;
     }
 
     [RelayCommand]
     public async Task GuardarSubEtapaAsync()
     {
-        long? idActividadParaGuardar = SelectedActividad?.IdActividad;
+        SetIsBusy(true);
+        long? idActividadParaGuardar = null;
 
-        if (SelectedActividad != null && SelectedActividad.IdActividad == -1) // "Registrar nueva actividad..."
+        if (SelectedActividad == null)
+        {
+            await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una actividad para la subetapa.", "OK");
+            SetIsBusy(false);
+            return;
+        }
+
+        // Lógica para registrar nueva actividad (si aplica)
+        if (SelectedActividad.IdActividad == -1)
         {
             if (string.IsNullOrWhiteSpace(NombreNuevaActividad))
             {
-                await Shell.Current.DisplayAlert("Error", "El nombre de la nueva actividad es obligatorio.", "OK");
+                await Shell.Current.DisplayAlert("Validación", "El nombre de la nueva actividad es obligatorio.", "OK");
+                SetIsBusy(false);
                 return;
             }
+            if (SelectedCategoriaActividad == null)
+            {
+                await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una categoría para la nueva actividad.", "OK");
+                SetIsBusy(false);
+                return;
+            }
+            // Asumimos que la nueva actividad hereda la UOM de alguna forma o se pide un picker adicional
+            // Para simplificar, si no se define explícitamente una UOM para la NUEVA actividad, podría quedar null.
+            // Es importante que la tabla `actividades` permita `unidad_medida_id` nullable si este es el caso.
+            // O, añadir un picker para `UniMedRe` cuando `MostrarCampoNuevaActividad` es true.
+
             var nuevaActividadDto = new Actividad
             {
                 NombreActividad = NombreNuevaActividad,
-                CategoriaActividadId = SelectedCategoriaActividad?.IdCategoriaActividad
+                CategoriaActividadId = SelectedCategoriaActividad.IdCategoriaActividad,
+                // UnidadMedidaId = idDeLaUnidadDeMedidaSeleccionadaParaNuevaActividad, // Si se añade picker
+                CreatedAt = System.DateTime.UtcNow
             };
             var actividadGuardada = await _dataService.SaveActividadAsync(nuevaActividadDto);
             if (actividadGuardada == null || actividadGuardada.IdActividad == 0)
             {
                 await Shell.Current.DisplayAlert("Error", "No se pudo guardar la nueva actividad.", "OK");
+                SetIsBusy(false);
                 return;
             }
             idActividadParaGuardar = actividadGuardada.IdActividad;
+            await CargarActividadesAsync(null, null);
         }
-        else if (SelectedActividad == null && !string.IsNullOrWhiteSpace(NombreNuevaActividad))
+        else
         {
-            await Shell.Current.DisplayAlert("Error", "Seleccione una actividad de la lista o elija 'Registrar nueva actividad...' y escriba el nombre.", "OK");
+            idActividadParaGuardar = SelectedActividad.IdActividad;
+        }
+
+        if (!idActividadParaGuardar.HasValue || idActividadParaGuardar.Value == 0)
+        {
+            await Shell.Current.DisplayAlert("Error", "No se pudo determinar la actividad.", "OK");
+            SetIsBusy(false);
             return;
         }
 
-
-        if (!idActividadParaGuardar.HasValue || idActividadParaGuardar.Value == 0 || (idActividadParaGuardar.Value == -1 && string.IsNullOrWhiteSpace(NombreNuevaActividad)))
+        // Validar CantidadSubEtapa ingresada por el usuario
+        if (CantidadSubEtapa == null || CantidadSubEtapa.Value <= 0)
         {
-            await Shell.Current.DisplayAlert("Error", "La actividad es obligatoria.", "OK");
-            return;
-        }
-        if (CantidadSubEtapa == null) // Ajusta validaciones según necesites
-        {
-            await Shell.Current.DisplayAlert("Error", "Completa todos los campos obligatorios.", "OK");
+            await Shell.Current.DisplayAlert("Validación", "La cantidad de la subetapa debe ser un valor positivo.", "OK");
+            SetIsBusy(false);
             return;
         }
 
-        IsBusy = true;
+        if (DiasCalSubEtapa == null || DiasCalSubEtapa <= 0)
+        {
+            await Shell.Current.DisplayAlert("Validación", "Los días calendario estimados deben ser mayor a cero.", "OK");
+            SetIsBusy(false);
+            return;
+        }
+
         try
         {
-            long id = OfflineFirstDataService.GenerarIdAleatorio();
+            long idSubEtapaLocal = OfflineFirstDataService.GenerarIdAleatorio();
 
             var subEtapa = new SubEtapa
             {
-                Id = id,
-                ActividadSubEtapaId = idActividadParaGuardar, // Usar el ID de la actividad
-                CantidadSubEtapa = CantidadSubEtapa,
-                PrecioUniSubEtapa = PrecioUniSubEtapa,
-                PrecioUniEjeSubEtapa = PrecioUniEjeSubEtapa,
-                // TotalSubEstapa se calcula al agregar/modificar recursos
-                MontoEjeSubEtapa = MontoEjeSubEtapa,
+                Id = idSubEtapaLocal,
+                ActividadSubEtapaId = idActividadParaGuardar,
+                CantidadSubEtapa = CantidadSubEtapa, // Guardar la cantidad ingresada por el usuario
+                PrecioUniSubEtapa = null, // Se calculará después de añadir recursos
+                TotalSubEstapa = null,    // Se actualizará desde recursos
                 DiasCalSubEtapa = DiasCalSubEtapa,
-                DiasEjeSubEtapa = DiasEjeSubEtapa,
                 IdEtapa = IdEtapa,
-                IdUniMedida = IdUniMedida,
-                CreatedAt = System.DateTime.UtcNow
+                CreatedAt = System.DateTime.UtcNow,
+                NumeroSubEtapa = (SubEtapas.Any() ? SubEtapas.Max(s => s.NumeroSubEtapa) : 0) + 1
             };
 
             await _dataService.SaveSubEtapa(subEtapa);
-            await Shell.Current.DisplayAlert("Éxito", "Subetapa guardada correctamente.", "OK");
 
-            // Limpiar campos de entrada
-            SelectedCategoriaActividad = null; // Disparará la limpieza de actividades
-            // SelectedActividad = null; // Se limpia por el cambio de categoría
-            // NombreNuevaActividad = string.Empty; // Se limpia por el cambio de actividad/categoría
-            CantidadSubEtapa = null;
-            PrecioUniSubEtapa = null;
-            PrecioUniEjeSubEtapa = null;
-            MontoEjeSubEtapa = null;
+            // Limpiar campos del formulario
+            SelectedActividad = null;
+            CantidadSubEtapa = null; // Limpiar la cantidad ingresada
             DiasCalSubEtapa = null;
-            DiasEjeSubEtapa = null;
-            SelectedUniMedRe = null; // Esto limpiará IdUniMedida
+            // Limpiar propiedades calculadas/de solo lectura que se muestran en el form
+            PrecioUniSubEtapa = null;
+            TotalSubEstapa = null;
 
             await CargarSubEtapasAsync();
+            await Shell.Current.DisplayAlert("Éxito", "Subetapa guardada. Añada recursos para calcular costos.", "OK");
         }
         catch (System.Exception ex)
         {
@@ -280,35 +343,39 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         }
         finally
         {
-            IsBusy = false;
+            SetIsBusy(false);
         }
     }
 
-    public async Task CargarSubEtapasAsync() // Lista de subetapas existentes
+    public async Task CargarSubEtapasAsync()
     {
-        IsBusy = true;
+        SetIsBusy(true);
         try
         {
-            var lista = await _dataService.GetSubEtapasByEtapaId(IdEtapa);
+            var listaSubEtapasDto = await _dataService.GetSubEtapasByEtapaId(IdEtapa);
             SubEtapas.Clear();
-            var todasActividades = await _dataService.GetActividadesAsync(); // Cargar todas las actividades una vez
-
-            foreach (var sub in lista.OrderBy(s => s.CreatedAt))
+            foreach (var sub in listaSubEtapasDto.OrderBy(s => s.NumeroSubEtapa).ThenBy(s => s.CreatedAt))
             {
-                if (sub.ActividadSubEtapaId.HasValue)
+                // Recalcular precio unitario al cargar, por si Total o Cantidad cambiaron.
+                if (sub.CantidadSubEtapa.HasValue && sub.CantidadSubEtapa > 0 && sub.TotalSubEstapa.HasValue)
                 {
-                    sub.Actividad = todasActividades.FirstOrDefault(a => a.IdActividad == sub.ActividadSubEtapaId.Value);
+                    sub.PrecioUniSubEtapa = sub.TotalSubEstapa / sub.CantidadSubEtapa;
+                }
+                else
+                {
+                    sub.PrecioUniSubEtapa = null;
                 }
                 SubEtapas.Add(sub);
             }
         }
         catch (System.Exception ex)
         {
+            Debug.WriteLine($"[RegistrarSubEtapaVM.CargarSubEtapasAsync] Error: {ex.Message}");
             await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar las subetapas: {ex.Message}", "OK");
         }
         finally
         {
-            IsBusy = false;
+            SetIsBusy(false);
         }
     }
 
@@ -317,10 +384,10 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
     {
         if (subEtapa == null || subEtapa.Id == 0)
         {
-            await Shell.Current.DisplayAlert("Error", "La SubEtapa no es válida o necesita ser sincronizada primero para agregar recursos.", "OK");
+            await Shell.Current.DisplayAlert("Error", "La SubEtapa no es válida.", "OK");
             return;
         }
-        IsBusy = true;
+        SetIsBusy(true);
         try
         {
             await Shell.Current.GoToAsync($"{nameof(RegistrarRecursoUtiPage)}?idSubEtapa={subEtapa.Id}");
@@ -331,7 +398,16 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         }
         finally
         {
-            IsBusy = false;
+            SetIsBusy(false);
+        }
+    }
+
+    public async Task OnPageAppearing()
+    {
+        Debug.WriteLine($"[RegistrarSubEtapaVM.OnPageAppearing] IdEtapa: {IdEtapa}");
+        if (IdEtapa != 0)
+        {
+            await CargarSubEtapasAsync();
         }
     }
 }

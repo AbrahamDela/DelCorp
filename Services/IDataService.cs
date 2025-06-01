@@ -53,7 +53,7 @@ namespace DelCorp.Services
         Task SaveCategoriaActividadAsync(CategoriaActividad categoriaActividad); // Principalmente para admin/sincronización
 
         // Actividades
-        Task<IEnumerable<Actividad>> GetActividadesAsync(long? categoriaActividadId = null);
+        Task<IEnumerable<Actividad>> GetActividadesAsync(long? categoriaActividadId = null, string searchText = null);
         Task<Actividad> GetActividadByIdAsync(long actividadId);
         Task<Actividad> SaveActividadAsync(Actividad actividad); // Para crear nuevas actividades desde la app
     }

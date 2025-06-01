@@ -41,7 +41,4 @@ public class SupabaseSubEtapa : BaseModel
 
     [Column("id_etapa")]
     public long IdEtapa { get; set; }
-
-    [Column("id_uni_medida")]
-    public long? IdUniMedida { get; set; }
 }

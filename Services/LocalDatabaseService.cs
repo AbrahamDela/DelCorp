@@ -1,5 +1,6 @@
 ﻿using DelCorp.Models.Local;
 using SQLite;
+using System.Diagnostics;
 
 namespace DelCorp.Services;
 
@@ -361,11 +362,37 @@ public class LocalDatabaseService : IDisposable
 
 
     // Para LocalActividad
-    public async Task<List<LocalActividad>> GetActividadesAsync() =>
-        await _database.Table<LocalActividad>().ToListAsync();
+    public async Task<List<LocalActividad>> GetActividadesAsync(string searchText = null) // Modificado
+    {
+        Debug.WriteLine($"[LocalDB.GetActividadesAsync] SearchText: {searchText}");
+        var query = _database.Table<LocalActividad>();
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            string searchTextLower = searchText.ToLower();
+            // SQLite no tiene ToLower() directamente en LINQ to SQLite así,
+            // tendrás que traer los datos y filtrar en memoria o usar una query SQL cruda
+            // o asegurarte que los datos se guardan en un formato consistente para la búsqueda.
+            // Una forma simple (pero no la más eficiente para grandes datasets) es filtrar en memoria:
+            var allActivities = await query.ToListAsync();
+            return allActivities.Where(a => a.NombreActividad.ToLower().Contains(searchTextLower)).ToList();
+        }
+        return await query.ToListAsync();
+    }
 
-    public async Task<List<LocalActividad>> GetActividadesByCategoriaIdAsync(long categoriaId) =>
-        await _database.Table<LocalActividad>().Where(a => a.CategoriaActividadId == categoriaId).ToListAsync();
+    public async Task<List<LocalActividad>> GetActividadesByCategoriaIdAsync(long categoriaId, string searchText = null) // Modificado
+    {
+        Debug.WriteLine($"[LocalDB.GetActividadesByCategoriaIdAsync] CategoriaId: {categoriaId}, SearchText: {searchText}");
+        var query = _database.Table<LocalActividad>().Where(a => a.CategoriaActividadId == categoriaId);
+        // Aplicar filtro de texto si se provee
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            string searchTextLower = searchText.ToLower();
+            // Mismo comentario sobre ToLower() que en GetActividadesAsync
+            var activitiesInCateogry = await query.ToListAsync();
+            return activitiesInCateogry.Where(a => a.NombreActividad.ToLower().Contains(searchTextLower)).ToList();
+        }
+        return await query.ToListAsync();
+    }
 
     public async Task<LocalActividad> GetActividadByIdAsync(long idActividad) =>
         await _database.Table<LocalActividad>().FirstOrDefaultAsync(a => a.IdActividad == idActividad);

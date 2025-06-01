@@ -249,27 +249,43 @@ namespace DelCorp.ViewModels
 
             try
             {
+                // Obtener todos los recursos para la subetapa actual
                 var recursosDeLaSubEtapa = await _dataService.GetRecursosUtiBySubEtapaIdAsync(IdSubEtapa);
                 decimal nuevoTotalSubEtapa = recursosDeLaSubEtapa.Sum(r => r.TotalRecursosUti ?? 0M);
 
+                // Obtener la subetapa padre
                 var parentSubEtapaToUpdate = await _dataService.GetSubEtapaByIdAsync(IdSubEtapa);
 
                 if (parentSubEtapaToUpdate != null)
                 {
                     parentSubEtapaToUpdate.TotalSubEstapa = nuevoTotalSubEtapa;
-                    await _dataService.SaveSubEtapa(parentSubEtapaToUpdate);
 
+                    // Recalcular PrecioUniSubEtapa si CantidadSubEtapa tiene valor
+                    if (parentSubEtapaToUpdate.CantidadSubEtapa.HasValue && parentSubEtapaToUpdate.CantidadSubEtapa.Value > 0)
+                    {
+                        parentSubEtapaToUpdate.PrecioUniSubEtapa = nuevoTotalSubEtapa / parentSubEtapaToUpdate.CantidadSubEtapa.Value;
+                    }
+                    else
+                    {
+                        parentSubEtapaToUpdate.PrecioUniSubEtapa = null; // o 0
+                    }
+
+                    await _dataService.SaveSubEtapa(parentSubEtapaToUpdate); // Guardar la subetapa con los valores actualizados
+
+                    // Actualizar la instancia local si es la misma
                     if (CurrentSubEtapa != null && CurrentSubEtapa.Id == parentSubEtapaToUpdate.Id)
                     {
-                        CurrentSubEtapa.TotalSubEstapa = nuevoTotalSubEtapa;
-                        OnPropertyChanged(nameof(CurrentSubEtapa));
+                        CurrentSubEtapa.TotalSubEstapa = parentSubEtapaToUpdate.TotalSubEstapa;
+                        CurrentSubEtapa.PrecioUniSubEtapa = parentSubEtapaToUpdate.PrecioUniSubEtapa;
+                        OnPropertyChanged(nameof(CurrentSubEtapa)); // Notificar cambio para la UI
                     }
+                    //Debug.WriteLine($"[RegistrarRecursoUtiVM] SubEtapa padre ID {parentSubEtapaToUpdate.Id} actualizada: Total={parentSubEtapaToUpdate.TotalSubEstapa}, PrecioUni={parentSubEtapaToUpdate.PrecioUniSubEtapa}");
                 }
             }
             catch (System.Exception ex)
             {
-                ErrorMessage = $"Error actualizando total de la subetapa: {ex.Message}";
-                System.Diagnostics.Debug.WriteLine($"Error actualizando total de la subetapa: {ex.Message}");
+                ErrorMessage = $"Error actualizando total y precio de la subetapa: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"[RegistrarRecursoUtiVM] Error actualizando subetapa padre: {ex.Message}");
             }
         }
     }

@@ -13,5 +13,7 @@ namespace DelCorp.Models
         public string NombreActividad { get; set; }
         public long? CategoriaActividadId { get; set; }
         public CategoriaActividad CategoriaActividad { get; set; }
+        public long? UnidadMedidaId { get; set; }
+        public UniMedRe UnidadMedida { get; set; }
     }
 }

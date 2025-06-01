@@ -18,5 +18,8 @@ namespace DelCorp.Models.Supabase
 
         [Column("categoria_actividad_id")]
         public long? CategoriaActividadId { get; set; }
+
+        [Column("unidad_medida_id")]
+        public long? UnidadMedidaId { get; set; }
     }
 }

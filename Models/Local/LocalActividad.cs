@@ -11,6 +11,7 @@ namespace DelCorp.Models.Local
         public DateTime CreatedAt { get; set; }
         public string NombreActividad { get; set; }
         public long? CategoriaActividadId { get; set; }
+        public long? UnidadMedidaId { get; set; }
         public bool IsSynced { get; set; }
     }
 }

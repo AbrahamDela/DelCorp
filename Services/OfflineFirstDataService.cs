@@ -4,6 +4,9 @@ using DelCorp.Models.Supabase;
 using DelCorp.Services.Mapping;
 using Supabase;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using Postgrest.Responses;
+using Supabase.Interfaces;
 
 namespace DelCorp.Services
 {
@@ -435,19 +438,34 @@ namespace DelCorp.Services
                     System.Diagnostics.Debug.WriteLine("[GetEtapasByPresupuestoId] No hay conexión a internet. Solo se usan etapas locales.");
                 }
 
-                var allUniMedRe = await GetUniMedReAsync();
-                var todasActividades = await GetActividadesAsync();
+                var todasActividades = await GetActividadesAsync(); // Carga todas una vez
+                var todasCategorias = await GetCategoriasActividadAsync();
 
-                foreach (var etapa in dtoEtapas)
+                foreach (var etapaDto in dtoEtapas)
                 {
-                    if (etapa.IdActividadEtapa.HasValue)
+                    // Poblar Actividad principal de la Etapa
+                    if (etapaDto.IdActividadEtapa.HasValue && etapaDto.Actividad == null)
                     {
-                        etapa.Actividad = todasActividades.FirstOrDefault(a => a.IdActividad == etapa.IdActividadEtapa.Value);
+                        etapaDto.Actividad = todasActividades.FirstOrDefault(a => a.IdActividad == etapaDto.IdActividadEtapa.Value);
+                        if (etapaDto.Actividad != null)
+                        {
+                            if (etapaDto.Actividad.CategoriaActividadId.HasValue && etapaDto.Actividad.CategoriaActividad == null)
+                            {
+                                etapaDto.Actividad.CategoriaActividad = todasCategorias.FirstOrDefault(c => c.IdCategoriaActividad == etapaDto.Actividad.CategoriaActividadId.Value);
+                            }
+                            // Poblar UnidadMedida de la Actividad principal si no está ya
+                            if (etapaDto.Actividad.UnidadMedidaId.HasValue && etapaDto.Actividad.UnidadMedida == null)
+                            {
+                                var todasLasUnidades = await GetUniMedReAsync(); // Asegurar que todasUnidades esté disponible
+                                etapaDto.Actividad.UnidadMedida = todasLasUnidades.FirstOrDefault(u => u.Id == etapaDto.Actividad.UnidadMedidaId.Value);
+                            }
+                        }
                     }
 
-                    var subEtapas = await GetSubEtapasByEtapaId(etapa.Id);
-                    etapa.SubEtapas = subEtapas.ToList();
-                    System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Cargadas {etapa.SubEtapas.Count} subetapas para Etapa ID: {etapa.Id}");
+                    // Cargar y poblar SubEtapas de la Etapa
+                    var subEtapasDeEtapa = await GetSubEtapasByEtapaId(etapaDto.Id); // Este método ya debe poblar Actividad y CategoriaActividad en las subetapas
+                    etapaDto.SubEtapas = subEtapasDeEtapa.ToList();
+                    System.Diagnostics.Debug.WriteLine($"[OFDS.GetEtapasByPresupuestoId] Cargadas {etapaDto.SubEtapas.Count} subetapas para Etapa ID: {etapaDto.Id}");
                 }
 
                 System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Retornando {dtoEtapas.Count} etapas, ahora con sus subetapas pobladas.");
@@ -872,14 +890,27 @@ namespace DelCorp.Services
                     System.Diagnostics.Debug.WriteLine("[GetSubEtapasByEtapaId] No hay conexión a Internet. Se usan solo subetapas locales.");
                 }
 
-                var allUniMedRe = await GetUniMedReAsync();
-                var todasActividades = await GetActividadesAsync();
+                var todasActividades = await GetActividadesAsync(); // Carga todas una vez
+                var todasCategorias = await GetCategoriasActividadAsync(); // Carga todas una vez
+                //var todasUnidades = await GetUniMedReAsync(); // Carga todas una vez
 
-                foreach (var subEtapaDto in dtoEtapas)
+                foreach (var subEtapaDto in dtoEtapas) // Asegúrate que esta variable es la colección de SubEtapa DTOs
                 {
-                    if (subEtapaDto.ActividadSubEtapaId.HasValue)
+                    if (subEtapaDto.ActividadSubEtapaId.HasValue && subEtapaDto.Actividad == null)
                     {
                         subEtapaDto.Actividad = todasActividades.FirstOrDefault(a => a.IdActividad == subEtapaDto.ActividadSubEtapaId.Value);
+                        if (subEtapaDto.Actividad != null)
+                        {
+                            if (subEtapaDto.Actividad.CategoriaActividadId.HasValue && subEtapaDto.Actividad.CategoriaActividad == null)
+                            {
+                                subEtapaDto.Actividad.CategoriaActividad = todasCategorias.FirstOrDefault(cat => cat.IdCategoriaActividad == subEtapaDto.Actividad.CategoriaActividadId.Value);
+                            }
+                            /* Poblar UnidadMedida de la Actividad de la SubEtapa si no está ya
+                            if (subEtapaDto.Actividad.UnidadMedidaId.HasValue && subEtapaDto.Actividad.UnidadMedida == null)
+                            {
+                                subEtapaDto.Actividad.UnidadMedida = todasUnidades.FirstOrDefault(u => u.Id == subEtapaDto.Actividad.UnidadMedidaId.Value);
+                            } */
+                        }
                     }
                 }
 
@@ -1377,82 +1408,105 @@ namespace DelCorp.Services
         }
 
         // --- Implementación para Actividades ---
-        public async Task<IEnumerable<Actividad>> GetActividadesAsync(long? categoriaActividadId = null)
+        public async Task<IEnumerable<Actividad>> GetActividadesAsync(long? categoriaActividadId = null, string searchText = null)
         {
+            Debug.WriteLine($"[OFDS.GetActividadesAsync] Solicitado con CategoriaId: {categoriaActividadId}, SearchText: \"{searchText}\"");
             try
             {
-                // Obtener de la base de datos local
                 List<LocalActividad> localItems;
                 if (categoriaActividadId.HasValue)
                 {
-                    localItems = await _localDatabase.GetActividadesByCategoriaIdAsync(categoriaActividadId.Value); //
+                    localItems = await _localDatabase.GetActividadesByCategoriaIdAsync(categoriaActividadId.Value, searchText);
                 }
                 else
                 {
-                    localItems = await _localDatabase.GetActividadesAsync(); //
+                    localItems = await _localDatabase.GetActividadesAsync(searchText);
                 }
-                var dtos = localItems.ToDtoList(); // Asume ActividadMapper
+                var dtos = localItems.ToDtoList();
+                Debug.WriteLine($"[OFDS.GetActividadesAsync] {dtos.Count} actividades encontradas localmente con filtros.");
 
                 if (_connectivity.NetworkAccess == NetworkAccess.Internet)
                 {
+                    Debug.WriteLine("[OFDS.GetActividadesAsync] Conectado a Internet. Consultando Supabase...");
                     try
                     {
-                        var query = _supabaseClient.From<SupabaseActividad>();
+                        // Iniciar la construcción de la consulta
+                        var queryBuilder = _supabaseClient.From<SupabaseActividad>();
+
+                        // Aplicar filtros condicionalmente
                         if (categoriaActividadId.HasValue)
                         {
-                            query = (Supabase.Interfaces.ISupabaseTable<SupabaseActividad, Supabase.Realtime.RealtimeChannel>)query.Filter("categoria_actividad_id", Postgrest.Constants.Operator.Equals, categoriaActividadId.Value.ToString());
+                            queryBuilder = (ISupabaseTable<SupabaseActividad, Supabase.Realtime.RealtimeChannel>)queryBuilder.Filter("categoria_actividad_id", Postgrest.Constants.Operator.Equals, categoriaActividadId.Value.ToString());
                         }
-                        var response = await query.Get();
-                        var remoteDtos = response.Models.ToDtoList(); // Asume ActividadMapper
-
-                        // Lógica de Sincronización (simple: reemplazar local con remoto para la categoría o todas)
-                        if (categoriaActividadId.HasValue) // Si se filtra por categoría, solo limpiar y reemplazar para esa categoría
+                        if (!string.IsNullOrWhiteSpace(searchText))
                         {
-                            var localIdsParaCategoria = localItems.Where(a => a.CategoriaActividadId == categoriaActividadId.Value)
-                                                                  .Select(a => a.IdActividad).ToList();
-                            // Esta lógica de borrado es simplista. Una real implicaría comparar timestamps o un flag de borrado.
-                            // Por ahora, si obtenemos datos del servidor para una categoría, reemplazamos los locales de esa categoría.
-                        }
-                        else // Si no hay filtro de categoría, limpiar todas las actividades locales
-                        {
-                            await _localDatabase.ClearActividadesAsync(); //
+                            // Usar 'ilike' para búsqueda insensible a mayúsculas/minúsculas
+                            // El método 'Like' en el cliente de C# para Postgrest usualmente es 'ilike' por defecto
+                            // o tiene una opción para ello. Si no, PostgREST soporta 'ilike'.
+                            // Asegúrate que la columna nombre_actividad existe en tu tabla SupabaseActividad
+                            queryBuilder = (ISupabaseTable<SupabaseActividad, Supabase.Realtime.RealtimeChannel>)queryBuilder.Filter("nombre_actividad", Postgrest.Constants.Operator.ILike, $"%{searchText}%");
                         }
 
-                        foreach (var dto in remoteDtos) // Guardar/actualizar todas las actividades remotas obtenidas
+                        // Ejecutar la consulta
+                        var response = await queryBuilder.Get();
+                        var remoteSupabaseActividades = response.Models;
+                        var remoteDtos = remoteSupabaseActividades.ToDtoList();
+                        Debug.WriteLine($"[OFDS.GetActividadesAsync] Supabase devolvió {remoteDtos.Count} actividades.");
+
+                        // Lógica de Sincronización...
+                        foreach (var remoteDto in remoteDtos)
                         {
-                            await _localDatabase.SaveActividadAsync(dto.ToLocal(isSynced: true)); //
+                            // var localEquivalent = await _localDatabase.GetActividadByIdAsync(remoteDto.IdActividad); // Ya no es necesario si SaveActividadAsync maneja upsert
+                            var localToSave = remoteDto.ToLocal(isSynced: true);
+                            await _localDatabase.SaveActividadAsync(localToSave);
                         }
-                        // Recargar desde local para asegurar consistencia después de la sincronización
+
+                        // Recargar desde local después de la sincronización
                         if (categoriaActividadId.HasValue)
                         {
-                            localItems = await _localDatabase.GetActividadesByCategoriaIdAsync(categoriaActividadId.Value); //
+                            localItems = await _localDatabase.GetActividadesByCategoriaIdAsync(categoriaActividadId.Value, searchText);
                         }
                         else
                         {
-                            localItems = await _localDatabase.GetActividadesAsync(); //
+                            localItems = await _localDatabase.GetActividadesAsync(searchText);
                         }
                         dtos = localItems.ToDtoList();
+                        Debug.WriteLine($"[OFDS.GetActividadesAsync] {dtos.Count} actividades después de la sincronización y recarga local.");
+
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, $"Error sincronizando Actividades desde Supabase (CategoriaId: {categoriaActividadId}).");
+                        _logger.LogError(ex, $"[OFDS.GetActividadesAsync] Error sincronizando Actividades desde Supabase. CategoriaId: {categoriaActividadId}, Search: \"{searchText}\".");
+                        Debug.WriteLine($"[OFDS.GetActividadesAsync] Error Supabase: {ex.Message} - StackTrace: {ex.StackTrace}");
                     }
                 }
+                else
+                {
+                    Debug.WriteLine("[OFDS.GetActividadesAsync] Sin conexión a Internet. Usando solo datos locales.");
+                }
 
-                // Poblar CategoriaActividad para cada Actividad DTO
-                var todasCategorias = await GetCategoriasActividadAsync(); //
+                var todasCategorias = await GetCategoriasActividadAsync();
+                var todasUnidades = await GetUniMedReAsync();
+
                 foreach (var actividadDto in dtos)
                 {
                     if (actividadDto.CategoriaActividadId.HasValue)
                     {
                         actividadDto.CategoriaActividad = todasCategorias.FirstOrDefault(cat => cat.IdCategoriaActividad == actividadDto.CategoriaActividadId.Value);
                     }
+                    if (actividadDto.UnidadMedidaId.HasValue)
+                    {
+                        actividadDto.UnidadMedida = todasUnidades.FirstOrDefault(u => u.Id == actividadDto.UnidadMedidaId.Value);
+                    }
                 }
+
+                Debug.WriteLine($"[OFDS.GetActividadesAsync] Retornando {dtos.Count()} DTOs ordenados.");
                 return dtos.OrderBy(a => a.NombreActividad);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error obteniendo Actividades.");
+                _logger.LogError(ex, "[OFDS.GetActividadesAsync] Error general obteniendo Actividades.");
+                Debug.WriteLine($"[OFDS.GetActividadesAsync] Error General: {ex.Message} - StackTrace: {ex.StackTrace}");
                 return Enumerable.Empty<Actividad>();
             }
         }

@@ -205,7 +205,6 @@ namespace DelCorp.Services.Mapping
                 DiasEjeEtapa = local.DiasEjeEtapa,
                 ProgresoEtapa = local.ProgresoEtapa,
                 IdPresupuesto = local.IdPresupuesto,
-                IdUniMedida = local.IdUniMedida,
                 CreatedAt = local.CreatedAt
             };
         }
@@ -227,7 +226,6 @@ namespace DelCorp.Services.Mapping
                 DiasEjeEtapa = dto.DiasEjeEtapa,
                 ProgresoEtapa = dto.ProgresoEtapa,
                 IdPresupuesto = dto.IdPresupuesto,
-                IdUniMedida = dto.IdUniMedida,
                 //CreatedAt = dto.CreatedAt ?? DateTime.Now,
                 IsSynced = true
             };
@@ -249,7 +247,6 @@ namespace DelCorp.Services.Mapping
                 DiasEjeEtapa = dto.DiasEjeEtapa,
                 ProgresoEtapa = dto.ProgresoEtapa,
                 IdPresupuesto = dto.IdPresupuesto,
-                IdUniMedida = dto.IdUniMedida,
                 //CreatedAt = dto.CreatedAt ?? DateTime.Now
             };
         }
@@ -270,7 +267,6 @@ namespace DelCorp.Services.Mapping
                 DiasEjeEtapa = supabase.DiasEjeEtapa,
                 ProgresoEtapa = supabase.ProgresoEtapa,
                 IdPresupuesto = supabase.IdPresupuesto,
-                IdUniMedida = supabase.IdUniMedida,
                 CreatedAt = supabase.CreatedAt
             };
         }

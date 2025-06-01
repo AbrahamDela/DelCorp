@@ -20,8 +20,6 @@ public class SubEtapa
     public long? DiasCalSubEtapa { get; set; }
     public long? DiasEjeSubEtapa { get; set; }
     public long IdEtapa { get; set; }
-    public long? IdUniMedida { get; set; }
 
     public Actividad Actividad { get; set; }
-    public UniMedRe UniMedida { get; set; }
 }

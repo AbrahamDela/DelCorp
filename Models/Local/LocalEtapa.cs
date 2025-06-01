@@ -23,6 +23,5 @@ namespace DelCorp.Models.Local
         public long? DiasEjeEtapa { get; set; }
         public decimal? ProgresoEtapa { get; set; }
         public long IdPresupuesto { get; set; }
-        public long? IdUniMedida { get; set; }
     }
 }

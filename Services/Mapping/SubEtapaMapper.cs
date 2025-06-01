@@ -25,7 +25,6 @@ public static class SubEtapaMapper
             DiasCalSubEtapa = subEtapa.DiasCalSubEtapa,
             DiasEjeSubEtapa = subEtapa.DiasEjeSubEtapa,
             IdEtapa = subEtapa.IdEtapa,
-            IdUniMedida = subEtapa.IdUniMedida,
             IsSynced = isSynced
         };
     }
@@ -49,7 +48,6 @@ public static class SubEtapaMapper
             DiasCalSubEtapa = subEtapaDto.DiasCalSubEtapa,
             DiasEjeSubEtapa = subEtapaDto.DiasEjeSubEtapa,
             IdEtapa = subEtapaDto.IdEtapa,
-            IdUniMedida = subEtapaDto.IdUniMedida,
             IsSynced = (subEtapaDto.Id != 0) // Si el DTO tiene un Id (ServerId), se considera sincronizado al mapear a local desde una fuente autoritativa.
                                              // O maneja IsSynced explícitamente donde se llame a ToLocal.
         };
@@ -75,7 +73,6 @@ public static class SubEtapaMapper
             DiasCalSubEtapa = local.DiasCalSubEtapa,
             DiasEjeSubEtapa = local.DiasEjeSubEtapa,
             IdEtapa = local.IdEtapa,
-            IdUniMedida = local.IdUniMedida
             // IsSynced no suele estar en el DTO a menos que la UI lo necesite.
         };
     }
@@ -97,8 +94,7 @@ public static class SubEtapaMapper
             MontoEjeSubEtapa = subEtapaDto.MontoEjeSubEtapa,
             DiasCalSubEtapa = subEtapaDto.DiasCalSubEtapa,
             DiasEjeSubEtapa = subEtapaDto.DiasEjeSubEtapa,
-            IdEtapa = subEtapaDto.IdEtapa,
-            IdUniMedida = subEtapaDto.IdUniMedida
+            IdEtapa = subEtapaDto.IdEtapa
         };
     }
 
@@ -119,8 +115,7 @@ public static class SubEtapaMapper
             MontoEjeSubEtapa = supabase.MontoEjeSubEtapa,
             DiasCalSubEtapa = supabase.DiasCalSubEtapa,
             DiasEjeSubEtapa = supabase.DiasEjeSubEtapa,
-            IdEtapa = supabase.IdEtapa,
-            IdUniMedida = supabase.IdUniMedida
+            IdEtapa = supabase.IdEtapa
         };
     }
 

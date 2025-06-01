@@ -19,10 +19,8 @@ namespace DelCorp.Models
         public long? DiasEjeEtapa { get; set; }
         public decimal? ProgresoEtapa { get; set; }
         public long IdPresupuesto { get; set; }
-        public long? IdUniMedida { get; set; }
 
         public Actividad Actividad { get; set; }
-        public UniMedRe UniMedida { get; set; }
         public List<SubEtapa> SubEtapas { get; set; } = new List<SubEtapa>();
     }
 }

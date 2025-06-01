@@ -19,6 +19,5 @@ public class LocalSubEtapa
     public long? DiasCalSubEtapa { get; set; }
     public long? DiasEjeSubEtapa { get; set; }
     public long IdEtapa { get; set; }
-    public long? IdUniMedida { get; set; }
     public bool IsSynced { get; internal set; }
 }
