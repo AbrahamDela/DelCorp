@@ -154,6 +154,25 @@ public class LocalDatabaseService : IDisposable
 
     public async Task SaveEtapaAsync(LocalEtapa etapa)
     {
+        // Try to update existing records when possible to avoid duplicates
+        if (etapa.Id != 0)
+        {
+            await _database.UpdateAsync(etapa);
+            return;
+        }
+
+        if (etapa.ServerId.HasValue)
+        {
+            var existing = await _database.Table<LocalEtapa>()
+                .FirstOrDefaultAsync(e => e.ServerId == etapa.ServerId.Value);
+            if (existing != null)
+            {
+                etapa.Id = existing.Id;
+                await _database.UpdateAsync(etapa);
+                return;
+            }
+        }
+
         await _database.InsertAsync(etapa);
     }
 
@@ -201,6 +220,24 @@ public class LocalDatabaseService : IDisposable
     }
     public async Task SaveSubEtapaAsync(LocalSubEtapa subEtapa)
     {
+        if (subEtapa.Id != 0)
+        {
+            await _database.UpdateAsync(subEtapa);
+            return;
+        }
+
+        if (subEtapa.ServerId.HasValue)
+        {
+            var existing = await _database.Table<LocalSubEtapa>()
+                .FirstOrDefaultAsync(x => x.ServerId == subEtapa.ServerId.Value);
+            if (existing != null)
+            {
+                subEtapa.Id = existing.Id;
+                await _database.UpdateAsync(subEtapa);
+                return;
+            }
+        }
+
         await _database.InsertAsync(subEtapa);
     }
 
