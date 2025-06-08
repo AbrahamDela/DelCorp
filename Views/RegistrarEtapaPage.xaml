@@ -9,40 +9,60 @@
     <ContentPage.Resources>
         <ResourceDictionary>
             <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+            <converters:CountToBoolConverter x:Key="CountToBoolConverter" />
         </ResourceDictionary>
     </ContentPage.Resources>
 
     <ScrollView>
         <VerticalStackLayout Spacing="10" Padding="20">
 
-            <Label Text="Registrar Nueva Etapa" FontAttributes="Bold" FontSize="Medium"/>
+            <Label Text="Nombre de la Etapa/Actividad" FontAttributes="Bold"/>
+            <Frame Padding="0" CornerRadius="8" BorderColor="LightGray">
+                <Entry Placeholder="Escriba para buscar o crear..."
+                       Text="{Binding SearchTextActividad, Mode=TwoWay}"
+                       ClearButtonVisibility="WhileEditing"
+                       VerticalOptions="Center"/>
+            </Frame>
 
-            <Picker Title="Seleccionar Actividad"
-                    ItemsSource="{Binding ActividadesDisponibles}"
-                    ItemDisplayBinding="{Binding NombreActividad}"
-                    SelectedItem="{Binding SelectedActividad}" />
+            <CollectionView ItemsSource="{Binding ActividadesDisponibles}"
+                            SelectionMode="None"
+                            MaximumHeightRequest="150"
+                            IsVisible="{Binding ActividadesDisponibles.Count, Converter={StaticResource CountToBoolConverter}}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Actividad">
+                        <StackLayout Padding="10" Spacing="5">
+                            <Label Text="{Binding NombreActividad}" FontSize="16"/>
+                            <StackLayout.GestureRecognizers>
+                                <TapGestureRecognizer 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarEtapaViewModel}}, Path=SelectActividadCommand}"
+                                    CommandParameter="{Binding .}"/>
+                            </StackLayout.GestureRecognizers>
+                        </StackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
 
-            <Entry Placeholder="Nombre de Nueva Actividad"
-                   Text="{Binding NombreNuevaActividad}"
-                   IsVisible="{Binding MostrarCampoNuevaActividad}" />
+            <VerticalStackLayout IsVisible="{Binding ShowNewActividadFields}" Spacing="10">
+                <Label Text="Registrar Nueva Actividad" FontAttributes="Bold" TextColor="#512BD4"/>
+                <Picker Title="Seleccione una Categoría"
+                        ItemsSource="{Binding CategoriasActividad}"
+                        ItemDisplayBinding="{Binding NombreCategoriaActividad}"
+                        SelectedItem="{Binding SelectedCategoriaActividad}"/>
+                <Picker Title="Seleccione Unidad de Medida"
+                        ItemsSource="{Binding DisponibleUniMedRe}"
+                        ItemDisplayBinding="{Binding NombreUniMedRe}"
+                        SelectedItem="{Binding SelectedUniMedRe}"/>
+            </VerticalStackLayout>
 
-            <Picker Title="Categoría para Nueva Actividad"
-                    ItemsSource="{Binding CategoriasActividad}"
-                    ItemDisplayBinding="{Binding NombreCategoriaActividad}"
-                    SelectedItem="{Binding SelectedCategoriaActividad}"
-                    IsVisible="{Binding MostrarCampoNuevaActividad}"
-                    IsEnabled="{Binding PickersForNewActivityEnabled}" />
+            <Label Text="Cantidad" FontAttributes="Bold" Margin="0,15,0,0"/>
+            <Frame Padding="0" CornerRadius="8" BorderColor="LightGray">
+                 <Entry Placeholder="Ej: 100" Keyboard="Numeric" Text="{Binding CantidadEtapa}" />
+            </Frame>
 
-            <Picker Title="Unidad de Medida para Nueva Actividad"
-                    ItemsSource="{Binding DisponibleUniMedRe}"
-                    ItemDisplayBinding="{Binding NombreUniMedRe}"
-                    SelectedItem="{Binding SelectedUniMedRe}"
-                    IsVisible="{Binding MostrarCampoNuevaActividad}"
-                    IsEnabled="{Binding PickersForNewActivityEnabled}" />
-
-            <Button Text="Guardar Etapa"
-                    Command="{Binding GuardarEtapaCommand}"
-                    IsEnabled="{Binding IsNotBusy}" />
+            <Button Text="Guardar Etapa" 
+                    Command="{Binding GuardarEtapaCommand}" 
+                    IsEnabled="{Binding IsNotBusy}"
+                    Margin="0,20,0,0"/>
 
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
 
