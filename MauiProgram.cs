@@ -47,7 +47,6 @@ namespace DelCorp
             builder.Services.AddTransient<LoginViewModel>();
             builder.Services.AddTransient<RegisterViewModel>();
             builder.Services.AddTransient<UserProfileViewModel>();
-            builder.Services.AddTransient<ManageBudgetViewModel>();
             builder.Services.AddTransient<PresupuestoViewModel>();
             builder.Services.AddTransient<RegistrarPresupuestoViewModel>();
             builder.Services.AddTransient<RegistrarEtapaViewModel>();
@@ -61,7 +60,6 @@ namespace DelCorp
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<RegisterPage>();
             builder.Services.AddTransient<UserProfilePage>();
-            builder.Services.AddTransient<ManageBudget>();
             builder.Services.AddTransient<PresupuestoPage>();
             builder.Services.AddTransient<RegistrarPresupuestoPage>();
             builder.Services.AddTransient<RegistrarEtapaPage>();

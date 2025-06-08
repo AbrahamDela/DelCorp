@@ -62,28 +62,6 @@ public partial class ProjectDetailViewModel : ObservableObject, IQueryAttributab
         }
     }
 
-    [RelayCommand]
-    private async Task NavigateToManageBudget(Project project)
-    {
-        if (project == null)
-            return;
-
-        try
-        {
-            var uri = $"{nameof(ManageBudget)}?id={project.Id}";
-            await Shell.Current.GoToAsync(uri);
-        }
-        catch (Exception ex)
-        {
-            // Manejar cualquier error de navegación
-            await Shell.Current.DisplayAlert(
-                "Error",
-                $"No se pudo navegar: {ex.Message}",
-                "OK"
-            );
-        }
-    }
-
     // Método para abrir ubicación en mapa si está disponible
     [RelayCommand]
     private async Task OpenLocation()

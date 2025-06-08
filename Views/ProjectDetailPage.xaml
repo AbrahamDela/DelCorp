@@ -126,14 +126,6 @@
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
-
-            <!-- Botón Volver -->
-            <Button 
-                Text="Gestionar Presupusto" 
-                Command="{Binding NavigateToManageBudgetCommand}"
-                CommandParameter="{Binding Project}"
-                HorizontalOptions="Center"
-                WidthRequest="200"/>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>
