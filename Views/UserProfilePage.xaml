@@ -33,7 +33,7 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- Detalles de la Cuenta -->
+            <!-- Detalles de la Cuenta 
             <Frame>
                 <VerticalStackLayout>
                     <Label Text="Detalles de la Cuenta" 
@@ -53,7 +53,7 @@
                             Text="{Binding UserProfile.Id}"/>
                     </StackLayout>
                 </VerticalStackLayout>
-            </Frame>
+            </Frame> -->
 
             <!-- Acciones de Perfil -->
             <Frame>

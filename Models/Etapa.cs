@@ -10,8 +10,6 @@ namespace DelCorp.Models
     // Convierte la clase Etapa a partial y hereda de ObservableObject
     public partial class Etapa : ObservableObject
     {
-        // Usa el atributo [ObservableProperty] para cada propiedad
-        // Esto generará automáticamente el boilerplate de INotifyPropertyChanged
         [ObservableProperty]
         private long _id;
 
@@ -50,8 +48,5 @@ namespace DelCorp.Models
 
         [ObservableProperty]
         private List<SubEtapa> _subEtapas = new List<SubEtapa>();
-
-        // El constructor por defecto es útil. Si tienes constructores con parámetros,
-        // puedes mantenerlos. Las propiedades serán inicializadas por los setters generados.
     }
 }
