@@ -104,33 +104,25 @@ public partial class ProjectDetailViewModel : ObservableObject, IQueryAttributab
     {
         try
         {
-            // Limpiar la colección existente
+            // Limpia la colección para evitar duplicados en la UI.
             Presupuestos.Clear();
 
-            Debug.WriteLine($"Presupuestos limpio: {Presupuestos.Count()}");
+            // Obtiene los presupuestos desde el servicio de datos.
+            var presupuestosList = await _dataService.GetPresupuestosByProjectId(projectId);
 
-            // Obtener presupuestos desde el servicio de datos
-            var presupuestos = await _dataService.GetPresupuestosByProjectId(projectId);
-
-            Debug.WriteLine($"Presupuestos recuperados: {presupuestos.Count()}");
-
-            if(presupuestos != null && presupuestos.Any())
+            if (presupuestosList != null)
             {
-                // Agregar presupuestos a la colección
-                foreach (var presupuesto in presupuestos)
+                foreach (var presupuesto in presupuestosList)
                 {
                     Presupuestos.Add(presupuesto);
                 }
-
-                var anyUnsyncedPresupuestos = Presupuestos.Any(p => !p.IsSynced);
             }
-
-            // Notificar que la colección ha cambiado
-            OnPropertyChanged(nameof(Presupuestos));
+            // La llamada a OnPropertyChanged(nameof(Presupuestos)) no es necesaria,
+            // ya que ObservableCollection notifica automáticamente a la UI de los cambios.
         }
         catch (Exception ex)
         {
-            // Manejar cualquier error de carga
+            // Manejar cualquier error de carga.
             await Shell.Current.DisplayAlert(
                 "Error",
                 $"No se pudieron cargar los presupuestos: {ex.Message}",

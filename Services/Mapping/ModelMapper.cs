@@ -215,7 +215,6 @@ namespace DelCorp.Services.Mapping
 
             return new LocalEtapa
             {
-                Id = (int)(dto.Id == 0 ? 0 : (long)dto.Id),
                 ServerId = dto.Id > 0 ? dto.Id : null,
                 NumeroEtapa = dto.NumeroEtapa,
                 IdActividadEtapa = dto.IdActividadEtapa,
@@ -226,7 +225,7 @@ namespace DelCorp.Services.Mapping
                 DiasEjeEtapa = dto.DiasEjeEtapa,
                 ProgresoEtapa = dto.ProgresoEtapa,
                 IdPresupuesto = dto.IdPresupuesto,
-                //CreatedAt = dto.CreatedAt ?? DateTime.Now,
+                CreatedAt = dto.CreatedAt != default(DateTime) ? dto.CreatedAt : DateTime.Now,
                 IsSynced = true
             };
         }

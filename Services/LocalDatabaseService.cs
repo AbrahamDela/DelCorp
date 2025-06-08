@@ -120,7 +120,17 @@ public class LocalDatabaseService : IDisposable
 
     public async Task SavePresupuestoAsync(LocalPresupuesto presupuesto)
     {
-        await _database.InsertAsync(presupuesto);
+        // Verifica si el presupuesto ya tiene un ID local.
+        if (presupuesto.Id != 0)
+        {
+            // Si tiene un ID, actualiza el registro existente.
+            await _database.UpdateAsync(presupuesto);
+        }
+        else
+        {
+            // Si no tiene ID (es 0), inserta un nuevo registro.
+            await _database.InsertAsync(presupuesto);
+        }
     }
 
     public void Dispose()
