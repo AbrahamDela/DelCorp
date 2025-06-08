@@ -463,4 +463,12 @@ public class LocalDatabaseService : IDisposable
         }
     }
     public async Task ClearActividadesAsync() => await _database.DeleteAllAsync<LocalActividad>();
+
+    public async Task UpdateAllEtapasAsync(IEnumerable<LocalEtapa> etapas)
+    {
+        await _database.RunInTransactionAsync(tran =>
+        {
+            tran.UpdateAll(etapas);
+        });
+    }
 }

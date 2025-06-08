@@ -14,8 +14,6 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
 {
     private readonly IDataService _dataService;
 
-    [ObservableProperty]
-    private decimal? _cantidadEtapa;
 
     [ObservableProperty]
     private int _idPresupuesto;
@@ -353,97 +351,81 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
         etapa.CantidadEtapa = cantidadCalculadaEtapa;
     }
 
-    [RelayCommand]
-    public async Task GuardarEtapaAsync() //Guardar nueva etapa
+    private async Task<Actividad> HandleActivityCreationAsync()
     {
-        // ... (Validaciones iniciales y lógica para nueva actividad sin cambios)...
-        SetIsBusy(true);
-        long? idActividadParaGuardar = null;
-
         if (SelectedActividad == null)
         {
-            await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una actividad para la etapa.", "OK");
-            SetIsBusy(false);
-            return;
+            await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una actividad.", "OK");
+            return null;
         }
 
-        if (SelectedActividad.IdActividad == -1) // User wants to register a new activity
+        if (SelectedActividad.IdActividad != -1)
         {
-            if (string.IsNullOrWhiteSpace(NombreNuevaActividad))
-            {
-                await Shell.Current.DisplayAlert("Validación", "El nombre de la nueva actividad es obligatorio.", "OK");
-                SetIsBusy(false);
-                return;
-            }
-            if (SelectedCategoriaActividad == null)
-            {
-                await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una categoría para la nueva actividad.", "OK");
-                SetIsBusy(false);
-                return;
-            }
-            if (SelectedUniMedRe == null)
-            {
-                await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una unidad de medida para la nueva actividad.", "OK");
-                SetIsBusy(false);
-                return;
-            }
-
-            var nuevaActividadDto = new Actividad
-            {
-                NombreActividad = NombreNuevaActividad,
-                CategoriaActividadId = SelectedCategoriaActividad.IdCategoriaActividad,
-                UnidadMedidaId = SelectedUniMedRe.Id,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            var actividadGuardada = await _dataService.SaveActividadAsync(nuevaActividadDto);
-            if (actividadGuardada == null || actividadGuardada.IdActividad == 0)
-            {
-                await Shell.Current.DisplayAlert("Error", "No se pudo guardar la nueva actividad. Verifique los datos o la conexión.", "OK");
-                SetIsBusy(false);
-                return;
-            }
-            idActividadParaGuardar = actividadGuardada.IdActividad;
-            await CargarActividadesAsync(null, SearchTextActividad);
+            return SelectedActividad;
         }
-        else
+
+        if (string.IsNullOrWhiteSpace(NombreNuevaActividad) || SelectedCategoriaActividad == null || SelectedUniMedRe == null)
         {
-            idActividadParaGuardar = SelectedActividad.IdActividad;
+            await Shell.Current.DisplayAlert("Validación", "Para una nueva actividad, debe proporcionar nombre, categoría y unidad de medida.", "OK");
+            return null;
         }
 
-        if (!idActividadParaGuardar.HasValue || idActividadParaGuardar.Value == 0)
+        var nuevaActividadDto = new Actividad
         {
-            await Shell.Current.DisplayAlert("Error", "No se pudo determinar la actividad para la etapa.", "OK");
-            SetIsBusy(false);
-            return;
+            NombreActividad = NombreNuevaActividad,
+            CategoriaActividadId = SelectedCategoriaActividad.IdCategoriaActividad,
+            UnidadMedidaId = SelectedUniMedRe.Id,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var actividadGuardada = await _dataService.SaveActividadAsync(nuevaActividadDto);
+
+        if (actividadGuardada == null || actividadGuardada.IdActividad == 0)
+        {
+            await Shell.Current.DisplayAlert("Error", "No se pudo guardar la nueva actividad.", "OK");
+            return null;
         }
+
+        await CargarActividadesAsync(null, SearchTextActividad);
+        return actividadGuardada;
+    }
+
+    [RelayCommand]
+    public async Task GuardarEtapaAsync()
+    {
+        SetIsBusy(true);
 
         try
         {
+            var actividadParaGuardar = await HandleActivityCreationAsync();
+            if (actividadParaGuardar == null)
+            {
+                return;
+            }
+
             long nuevoIdEtapaLocal = OfflineFirstDataService.GenerarIdAleatorio();
             long nuevoNumeroEtapa = (Etapas.Any() ? Etapas.Max(e => e.NumeroEtapa) : 0) + 1;
 
             var etapa = new Etapa
             {
                 Id = nuevoIdEtapaLocal,
-                IdActividadEtapa = idActividadParaGuardar.Value,
+                IdActividadEtapa = actividadParaGuardar.IdActividad,
                 IdPresupuesto = this.IdPresupuesto,
-                CantidadEtapa = this.CantidadEtapa,
                 MontoTotalEtapa = 0,
                 NumeroEtapa = nuevoNumeroEtapa,
                 CreatedAt = DateTime.UtcNow
             };
 
             var etapaGuardada = await _dataService.SaveEtapa(etapa);
+
             if (etapaGuardada != null)
             {
                 SelectedActividad = null;
-                CantidadEtapa = null;
                 NombreNuevaActividad = string.Empty;
                 SearchTextActividad = string.Empty;
                 MostrarCampoNuevaActividad = false;
 
-                await CargarEtapasAsync(); // Esto recargará y ordenará por NumeroEtapa
+                await CargarEtapasAsync();
                 await Shell.Current.DisplayAlert("Éxito", $"Etapa guardada con número {etapaGuardada.NumeroEtapa}.", "OK");
             }
             else
@@ -521,23 +503,7 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
         SetIsBusy(true);
         try
         {
-            // Los NumeroEtapa ya están actualizados en la colección local 'Etapas'
-            // gracias a LocalRenumberEtapas(). Ahora los persistimos.
-            bool guardadoExitoso = true;
-            for (int i = 0; i < Etapas.Count; i++)
-            {
-                // Podríamos añadir una comprobación para ver si el NumeroEtapa realmente cambió
-                // con respecto a su valor original en la BD antes de guardar, pero
-                // guardar todas las etapas en su nuevo orden numérico es más simple y robusto aquí.
-                var etapaGuardada = await _dataService.SaveEtapa(Etapas[i]);
-                if (etapaGuardada == null)
-                {
-                    guardadoExitoso = false;
-                    Debug.WriteLine($"[RegistrarEtapaVM] Error guardando etapa ID {Etapas[i].Id} durante SaveOrderChangesAsync.");
-                    // Podríamos decidir parar aquí o continuar guardando las demás.
-                    // Por ahora, continuamos.
-                }
-            }
+            bool guardadoExitoso = await _dataService.SaveEtapaOrder(Etapas.ToList());
 
             if (guardadoExitoso)
             {
@@ -546,17 +512,16 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
             }
             else
             {
-                await Shell.Current.DisplayAlert("Error Parcial", "Algunas etapas no pudieron guardarse correctamente. Por favor, revise la lista.", "OK");
+                await Shell.Current.DisplayAlert("Error", "No se pudo guardar el orden de las etapas.", "OK");
             }
 
-            // Siempre recargar para asegurar consistencia, especialmente si hubo errores parciales.
             await CargarEtapasAsync();
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[RegistrarEtapaVM] Error en SaveOrderChangesAsync: {ex.Message}");
             await Shell.Current.DisplayAlert("Error", $"No se pudo guardar el orden de las etapas: {ex.Message}", "OK");
-            await CargarEtapasAsync(); // Reintentar cargar para un estado consistente
+            await CargarEtapasAsync();
         }
         finally
         {
