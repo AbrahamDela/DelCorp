@@ -437,8 +437,9 @@ namespace DelCorp.Services
 
                 var todasActividades = await GetActividadesAsync(); // Carga todas una vez
                 var todasCategorias = await GetCategoriasActividadAsync();
+                var todasUnidades = await GetUniMedReAsync();
 
-                foreach (var etapaDto in dtoEtapas)
+                var etapaTasks = dtoEtapas.Select(async etapaDto =>
                 {
                     // Poblar Actividad principal de la Etapa
                     if (etapaDto.IdActividadEtapa.HasValue && etapaDto.Actividad == null)
@@ -453,8 +454,7 @@ namespace DelCorp.Services
                             // Poblar UnidadMedida de la Actividad principal si no está ya
                             if (etapaDto.Actividad.UnidadMedidaId.HasValue && etapaDto.Actividad.UnidadMedida == null)
                             {
-                                var todasLasUnidades = await GetUniMedReAsync(); // Asegurar que todasUnidades esté disponible
-                                etapaDto.Actividad.UnidadMedida = todasLasUnidades.FirstOrDefault(u => u.Id == etapaDto.Actividad.UnidadMedidaId.Value);
+                                etapaDto.Actividad.UnidadMedida = todasUnidades.FirstOrDefault(u => u.Id == etapaDto.Actividad.UnidadMedidaId.Value);
                             }
                         }
                     }
@@ -463,7 +463,9 @@ namespace DelCorp.Services
                     var subEtapasDeEtapa = await GetSubEtapasByEtapaId(etapaDto.Id); // Este método ya debe poblar Actividad y CategoriaActividad en las subetapas
                     etapaDto.SubEtapas = subEtapasDeEtapa.ToList();
                     System.Diagnostics.Debug.WriteLine($"[OFDS.GetEtapasByPresupuestoId] Cargadas {etapaDto.SubEtapas.Count} subetapas para Etapa ID: {etapaDto.Id}");
-                }
+                });
+
+                await Task.WhenAll(etapaTasks);
 
                 System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Retornando {dtoEtapas.Count} etapas, ahora con sus subetapas pobladas.");
                 return dtoEtapas.OrderBy(e => e.CreatedAt);
