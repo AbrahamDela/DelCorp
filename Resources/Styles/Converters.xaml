@@ -5,5 +5,6 @@
 
     <converters:StringToBoolConverter x:Key="StringToBoolConverter"/>
     <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+    <converters:CountToBoolConverter x:Key="CountToBoolConverter"/>
 
 </ResourceDictionary>
