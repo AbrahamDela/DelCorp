@@ -59,7 +59,7 @@
                                                     
                                     <StackLayout Grid.Column="0">
                                         <Label Style="{StaticResource LabelSmall}" Text="Fecha Inicio" />
-                                        <Label Text="{Binding FechaInicioPrespuesto, StringFormat='{0:dd/MM/yyyy}'}"
+                                        <Label Text="{Binding FechaInicioPresupuesto, StringFormat='{0:dd/MM/yyyy}'}"
                                                Style="{StaticResource BodySmall}" />
                                     </StackLayout>
                                     <StackLayout Grid.Column="1">
@@ -76,7 +76,7 @@
                                 </StackLayout>
                                 <StackLayout Grid.Column="1">
                                     <Label Style="{StaticResource LabelSmall}" Text="Ejecutado" />
-                                    <Label Text="{Binding MontoEjePrespuesto, StringFormat='C$ {0:N2}'}" Style="{StaticResource BodySmall}" />
+                                    <Label Text="{Binding MontoEjePresupuesto, StringFormat='C$ {0:N2}'}" Style="{StaticResource BodySmall}" />
                                 </StackLayout>
                                 <StackLayout Grid.Column="2">
                                     <Label Style="{StaticResource LabelSmall}" Text="Progreso" />

@@ -12,8 +12,8 @@ namespace DelCorp.Models
         public DateTime CreatedAt { get; set; }
         public string NombrePresupuesto { get; set; }
         public decimal? TotalPresupuesto { get; set; }
-        public decimal? MontoEjePrespuesto { get; set; }
-        public DateTime? FechaInicioPrespuesto { get; set; }
+        public decimal? MontoEjePresupuesto { get; set; }
+        public DateTime? FechaInicioPresupuesto { get; set; }
         public DateTime? FechaFinPresupuesto { get; set; }
         public long? DiasCalePresupuesto { get; set; }
         public long? DiasEjePresupuesto { get; set; }

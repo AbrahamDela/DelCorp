@@ -149,7 +149,7 @@ public partial class RegistrarPresupuestoViewModel : ObservableObject
             var presupuesto = new Presupuesto
             {
                 NombrePresupuesto = NombrePresupuesto,
-                FechaInicioPrespuesto = FechaInicioPresupuesto,
+                FechaInicioPresupuesto = FechaInicioPresupuesto,
                 FechaFinPresupuesto = FechaFinPresupuesto,
                 IdProyecto = IdProyecto
             };
