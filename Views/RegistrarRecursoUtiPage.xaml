@@ -23,8 +23,6 @@
                     ItemDisplayBinding="{Binding NombreUniMedRe}"
                     SelectedItem="{Binding SelectedUniMedRe}"/>
 
-            <DatePicker Date="{Binding FechaRecursoUti}" />
-
             <Entry Placeholder="Cantidad" Keyboard="Numeric" Text="{Binding Cantidad}"/>
             <Entry Placeholder="Precio Unitario" Keyboard="Numeric" Text="{Binding PrecioUnitario}"/>
             <Label Text="{Binding TotalCalculado, StringFormat='Total: C${0:N2}'}"/>
