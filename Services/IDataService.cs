@@ -48,10 +48,6 @@ namespace DelCorp.Services
         Task<RecursoUti> SaveRecursoUtiAsync(RecursoUti recursoUti);
         Task DeleteRecursoUtiAsync(long recursoUtiId);
 
-        // RegistroRecursoUti
-        Task<IEnumerable<RegistroRecursoUti>> GetRegistroRecursosUtiBySubEtapaIdAsync(long subEtapaId);
-        Task<RegistroRecursoUti> SaveRegistroRecursoUtiAsync(RegistroRecursoUti registro);
-
         // Actividades categoría
         Task<IEnumerable<CategoriaActividad>> GetCategoriasActividadAsync();
         Task SaveCategoriaActividadAsync(CategoriaActividad categoriaActividad); // Principalmente para admin/sincronización
