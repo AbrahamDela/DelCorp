@@ -5,7 +5,6 @@ using DelCorp.Services.Mapping;
 using Supabase;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
-using System.Linq;
 using Postgrest.Responses;
 using Supabase.Interfaces;
 
@@ -530,21 +529,6 @@ namespace DelCorp.Services
                 _logger.LogError($"Error al guardar etapa: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"Error al guardar etapa: {ex.Message}");
                 throw;
-            }
-        }
-
-        public async Task<bool> SaveEtapaOrder(List<Etapa> etapas)
-        {
-            try
-            {
-                var localEtapas = etapas.Select(e => e.ToLocal()).ToList();
-                await _localDatabase.UpdateAllEtapasAsync(localEtapas);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error al guardar orden de etapas: {ex.Message}");
-                return false;
             }
         }
 
