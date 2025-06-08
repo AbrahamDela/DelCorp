@@ -57,12 +57,6 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
     private string _searchTextActividad;
 
     [ObservableProperty]
-    private bool _showNewActividadFields;
-
-    [ObservableProperty]
-    private bool _isActividadFromList;
-
-    [ObservableProperty]
     private bool _hasPendingOrderChanges = false; // Nueva propiedad
 
     public bool IsNotBusy => !IsBusy;
@@ -83,49 +77,8 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
     // ... (CargarUniMedReAsync, CargarCategoriasActividadAsync, CargarActividadesAsync, etc. sin cambios) ...
     async partial void OnSearchTextActividadChanged(string oldValue, string newValue)
     {
-        // Si el cambio proviene de la selección en la lista, no recargar
-        if (IsActividadFromList)
-        {
-            IsActividadFromList = false;
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(newValue))
-        {
-            ActividadesDisponibles.Clear();
-            ShowNewActividadFields = false;
-            SelectedActividad = null;
-            return;
-        }
-
+        Debug.WriteLine($"[RegistrarEtapaVM] SearchTextActividad cambiado a: {newValue}");
         await CargarActividadesAsync(null, newValue);
-
-        var exactMatch = ActividadesDisponibles
-            .FirstOrDefault(a => a.NombreActividad.Equals(newValue, StringComparison.OrdinalIgnoreCase));
-
-        if (exactMatch != null && exactMatch.IdActividad != -1)
-        {
-            ShowNewActividadFields = false;
-            SelectedActividad = exactMatch;
-        }
-        else
-        {
-            ShowNewActividadFields = true;
-            SelectedActividad = null;
-        }
-    }
-
-    [RelayCommand]
-    private void SelectActividad(Actividad actividad)
-    {
-        if (actividad == null) return;
-
-        IsActividadFromList = true;
-        SearchTextActividad = actividad.NombreActividad;
-        SelectedActividad = actividad;
-
-        ShowNewActividadFields = false;
-        ActividadesDisponibles.Clear();
     }
 
     public async Task ActualizarEtapaConSubetapas(long idEtapa)
@@ -401,30 +354,43 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
     }
 
     [RelayCommand]
-    public async Task GuardarEtapaAsync()
+    public async Task GuardarEtapaAsync() //Guardar nueva etapa
     {
+        // ... (Validaciones iniciales y lógica para nueva actividad sin cambios)...
         SetIsBusy(true);
         long? idActividadParaGuardar = null;
 
-        if (string.IsNullOrWhiteSpace(SearchTextActividad))
+        if (SelectedActividad == null)
         {
-            await Shell.Current.DisplayAlert("Validación", "Debe escribir o seleccionar una actividad para la etapa.", "OK");
+            await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una actividad para la etapa.", "OK");
             SetIsBusy(false);
             return;
         }
 
-        if (ShowNewActividadFields)
+        if (SelectedActividad.IdActividad == -1) // User wants to register a new activity
         {
-            if (SelectedCategoriaActividad == null || SelectedUniMedRe == null)
+            if (string.IsNullOrWhiteSpace(NombreNuevaActividad))
             {
-                await Shell.Current.DisplayAlert("Validación", "Para registrar una nueva actividad, debe seleccionar su categoría y unidad de medida.", "OK");
+                await Shell.Current.DisplayAlert("Validación", "El nombre de la nueva actividad es obligatorio.", "OK");
+                SetIsBusy(false);
+                return;
+            }
+            if (SelectedCategoriaActividad == null)
+            {
+                await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una categoría para la nueva actividad.", "OK");
+                SetIsBusy(false);
+                return;
+            }
+            if (SelectedUniMedRe == null)
+            {
+                await Shell.Current.DisplayAlert("Validación", "Debe seleccionar una unidad de medida para la nueva actividad.", "OK");
                 SetIsBusy(false);
                 return;
             }
 
             var nuevaActividadDto = new Actividad
             {
-                NombreActividad = SearchTextActividad,
+                NombreActividad = NombreNuevaActividad,
                 CategoriaActividadId = SelectedCategoriaActividad.IdCategoriaActividad,
                 UnidadMedidaId = SelectedUniMedRe.Id,
                 CreatedAt = DateTime.UtcNow
@@ -433,24 +399,19 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
             var actividadGuardada = await _dataService.SaveActividadAsync(nuevaActividadDto);
             if (actividadGuardada == null || actividadGuardada.IdActividad == 0)
             {
-                await Shell.Current.DisplayAlert("Error", "No se pudo guardar la nueva actividad.", "OK");
+                await Shell.Current.DisplayAlert("Error", "No se pudo guardar la nueva actividad. Verifique los datos o la conexión.", "OK");
                 SetIsBusy(false);
                 return;
             }
             idActividadParaGuardar = actividadGuardada.IdActividad;
+            await CargarActividadesAsync(null, SearchTextActividad);
         }
         else
         {
-            if (SelectedActividad == null)
-            {
-                await Shell.Current.DisplayAlert("Error", "La actividad seleccionada no es válida. Por favor, elíjala de la lista.", "OK");
-                SetIsBusy(false);
-                return;
-            }
             idActividadParaGuardar = SelectedActividad.IdActividad;
         }
 
-        if (!idActividadParaGuardar.HasValue)
+        if (!idActividadParaGuardar.HasValue || idActividadParaGuardar.Value == 0)
         {
             await Shell.Current.DisplayAlert("Error", "No se pudo determinar la actividad para la etapa.", "OK");
             SetIsBusy(false);
@@ -476,14 +437,13 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
             var etapaGuardada = await _dataService.SaveEtapa(etapa);
             if (etapaGuardada != null)
             {
-                SearchTextActividad = string.Empty;
-                ShowNewActividadFields = false;
                 SelectedActividad = null;
-                SelectedCategoriaActividad = null;
-                SelectedUniMedRe = null;
                 CantidadEtapa = null;
+                NombreNuevaActividad = string.Empty;
+                SearchTextActividad = string.Empty;
+                MostrarCampoNuevaActividad = false;
 
-                await CargarEtapasAsync(); // Recarga la lista de etapas
+                await CargarEtapasAsync(); // Esto recargará y ordenará por NumeroEtapa
                 await Shell.Current.DisplayAlert("Éxito", $"Etapa guardada con número {etapaGuardada.NumeroEtapa}.", "OK");
             }
             else
