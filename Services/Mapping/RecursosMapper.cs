@@ -39,5 +39,62 @@ namespace DelCorp.Services.Mapping
         public static LocalRecursoUti ToLocal(this RecursoUti dto, bool isSynced = true) => dto == null ? null : new LocalRecursoUti { ServerId = dto.Id, CreatedAt = dto.CreatedAt, CantidadRecursosUti = dto.CantidadRecursosUti, PrecioUniRecursosUti = dto.PrecioUniRecursosUti, TotalRecursosUti = dto.TotalRecursosUti, IdSubEtapa = dto.IdSubEtapa, IdRecurso = dto.IdRecurso, IdUniMedRe = dto.IdUniMedRe, IsSynced = isSynced };
         public static List<RecursoUti> ToDtoList(this IEnumerable<SupabaseRecursoUti> supabaseList) => supabaseList.Select(s => s.ToDto()).ToList();
         public static List<RecursoUti> ToDtoList(this IEnumerable<LocalRecursoUti> localList) => localList.Select(l => l.ToDto()).ToList();
+
+        // RegistroRecursoUti Mappers
+        public static RegistroRecursoUti ToDto(this SupabaseRegistroRecursoUti supabase) => supabase == null ? null : new RegistroRecursoUti
+        {
+            Id = supabase.Id,
+            CreatedAt = supabase.CreatedAt,
+            FechaRecursoUti = supabase.FechaRecursoUti,
+            CantidadRecursosUti = supabase.CantidadRecursosUti,
+            PrecioUniRecursosUti = supabase.PrecioUniRecursosUti,
+            TotalRecursosUti = supabase.TotalRecursosUti,
+            IdRecurso = supabase.IdRecurso,
+            IdSubEtapa = supabase.IdSubEtapa,
+            IdUniMedida = supabase.IdUniMedida
+        };
+
+        public static RegistroRecursoUti ToDto(this LocalRegistroRecursoUti local) => local == null ? null : new RegistroRecursoUti
+        {
+            Id = local.ServerId ?? local.LocalId,
+            CreatedAt = local.CreatedAt,
+            FechaRecursoUti = local.FechaRecursoUti,
+            CantidadRecursosUti = local.CantidadRecursosUti,
+            PrecioUniRecursosUti = local.PrecioUniRecursosUti,
+            TotalRecursosUti = local.TotalRecursosUti,
+            IdRecurso = local.IdRecurso,
+            IdSubEtapa = local.IdSubEtapa,
+            IdUniMedida = local.IdUniMedida
+        };
+
+        public static SupabaseRegistroRecursoUti ToSupabase(this RegistroRecursoUti dto) => dto == null ? null : new SupabaseRegistroRecursoUti
+        {
+            Id = dto.Id,
+            CreatedAt = dto.CreatedAt,
+            FechaRecursoUti = dto.FechaRecursoUti,
+            CantidadRecursosUti = dto.CantidadRecursosUti,
+            PrecioUniRecursosUti = dto.PrecioUniRecursosUti,
+            TotalRecursosUti = dto.TotalRecursosUti,
+            IdRecurso = dto.IdRecurso,
+            IdSubEtapa = dto.IdSubEtapa,
+            IdUniMedida = dto.IdUniMedida
+        };
+
+        public static LocalRegistroRecursoUti ToLocal(this RegistroRecursoUti dto, bool isSynced = true) => dto == null ? null : new LocalRegistroRecursoUti
+        {
+            ServerId = dto.Id,
+            CreatedAt = dto.CreatedAt,
+            FechaRecursoUti = dto.FechaRecursoUti,
+            CantidadRecursosUti = dto.CantidadRecursosUti,
+            PrecioUniRecursosUti = dto.PrecioUniRecursosUti,
+            TotalRecursosUti = dto.TotalRecursosUti,
+            IdRecurso = dto.IdRecurso,
+            IdSubEtapa = dto.IdSubEtapa,
+            IdUniMedida = dto.IdUniMedida,
+            IsSynced = isSynced
+        };
+
+        public static List<RegistroRecursoUti> ToDtoList(this IEnumerable<SupabaseRegistroRecursoUti> supabaseList) => supabaseList.Select(s => s.ToDto()).ToList();
+        public static List<RegistroRecursoUti> ToDtoList(this IEnumerable<LocalRegistroRecursoUti> localList) => localList.Select(l => l.ToDto()).ToList();
     }
 }

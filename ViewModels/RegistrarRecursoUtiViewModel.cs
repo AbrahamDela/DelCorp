@@ -49,6 +49,9 @@ namespace DelCorp.ViewModels
         private decimal? _totalCalculado;
 
         [ObservableProperty]
+        private System.DateTime? _fechaRecursoUti = System.DateTime.Today;
+
+        [ObservableProperty]
         private bool _isBusy;
 
         public bool IsNotBusy => !IsBusy;
@@ -192,7 +195,19 @@ namespace DelCorp.ViewModels
                     CreatedAt = System.DateTime.UtcNow // Service should handle this ideally
                 };
 
+                var registro = new RegistroRecursoUti
+                {
+                    Id = 0,
+                    IdSubEtapa = IdSubEtapa,
+                    IdRecurso = SelectedRecurso.Id,
+                    IdUniMedida = SelectedUniMedRe.Id,
+                    CantidadRecursosUti = Cantidad,
+                    PrecioUniRecursosUti = PrecioUnitario,
+                    FechaRecursoUti = FechaRecursoUti,
+                };
+
                 var savedItem = await _dataService.SaveRecursoUtiAsync(newRecursoUti);
+                await _dataService.SaveRegistroRecursoUtiAsync(registro);
 
                 // To show details like name, re-fetch or update the savedItem with navigation properties
                 savedItem.Recurso = SelectedRecurso;
@@ -207,6 +222,7 @@ namespace DelCorp.ViewModels
                 Cantidad = null;
                 PrecioUnitario = null;
                 TotalCalculado = null;
+                FechaRecursoUti = System.DateTime.Today;
                 OnPropertyChanged(nameof(SelectedRecurso)); // Notify picker to reset
                 OnPropertyChanged(nameof(SelectedUniMedRe));
             }

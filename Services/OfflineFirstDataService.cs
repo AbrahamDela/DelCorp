@@ -1301,6 +1301,25 @@ namespace DelCorp.Services
             }
         }
 
+        // RegistroRecursoUti methods (local only)
+        public async Task<IEnumerable<RegistroRecursoUti>> GetRegistroRecursosUtiBySubEtapaIdAsync(long subEtapaId)
+        {
+            var localItems = await _localDatabase.GetRegistroRecursosUtiBySubEtapaIdAsync(subEtapaId);
+            return localItems.Select(l => RecursosMapper.ToDto(l)).OrderByDescending(r => r.FechaRecursoUti);
+        }
+
+        public async Task<RegistroRecursoUti> SaveRegistroRecursoUtiAsync(RegistroRecursoUti registro)
+        {
+            registro.CreatedAt = DateTime.UtcNow;
+            if (registro.CantidadRecursosUti.HasValue && registro.PrecioUniRecursosUti.HasValue)
+                registro.TotalRecursosUti = registro.CantidadRecursosUti.Value * registro.PrecioUniRecursosUti.Value;
+
+            var local = RecursosMapper.ToLocal(registro, isSynced: false);
+            await _localDatabase.SaveRegistroRecursoUtiAsync(local);
+            registro.Id = local.LocalId;
+            return registro;
+        }
+
         public async Task SyncRecursosUtiAsync() //
         {
             if (_connectivity.NetworkAccess != NetworkAccess.Internet) return; //
