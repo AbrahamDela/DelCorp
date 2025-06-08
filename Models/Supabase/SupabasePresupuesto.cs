@@ -24,10 +24,10 @@ public class SupabasePresupuesto : BaseModel
     public decimal? TotalPresupuesto { get; set; }
 
     [Column("monto_eje_presupuesto")]
-    public decimal? MontoEjePrespuesto { get; set; }
+    public decimal? MontoEjePresupuesto { get; set; }
 
     [Column("fecha_inicio_presupuesto")]
-    public DateTime? FechaInicioPrespuesto { get; set; }
+    public DateTime? FechaInicioPresupuesto { get; set; }
 
     [Column("fecha_fin_presupuesto")]
     public DateTime? FechaFinPresupuesto { get; set; }

@@ -93,7 +93,7 @@ public partial class ManageBudgetViewModel : ObservableObject, IQueryAttributabl
 
         // Establecer valores iniciales
         //EstadoPresupuesto = CurrentPresupuesto.Estado ?? "PENDIENTE";
-        FechaInicioPresupuesto = CurrentPresupuesto.FechaInicioPrespuesto;
+        FechaInicioPresupuesto = CurrentPresupuesto.FechaInicioPresupuesto;
         FechaFinPresupuesto = CurrentPresupuesto.FechaFinPresupuesto;
     }
 
@@ -169,7 +169,7 @@ public partial class ManageBudgetViewModel : ObservableObject, IQueryAttributabl
         {
             // Actualizar datos del presupuesto
             //CurrentPresupuesto.Estado = EstadoPresupuesto;
-            CurrentPresupuesto.FechaInicioPrespuesto = FechaInicioPresupuesto;
+            CurrentPresupuesto.FechaInicioPresupuesto = FechaInicioPresupuesto;
             CurrentPresupuesto.FechaFinPresupuesto = FechaFinPresupuesto;
 
             // Guardar presupuesto
