@@ -23,6 +23,7 @@ namespace DelCorp.Services
         //Etapas de presupuestos
         Task<IEnumerable<Etapa>> GetEtapasByPresupuestoId(int presupuestoId);
         Task<Etapa> SaveEtapa(Etapa etapa);
+        Task<bool> SaveEtapaOrder(List<Etapa> etapas);
         Task DeleteEtapa(long etapaId);
         Task<Presupuesto> SavePresupuesto(Presupuesto presupuesto);
 
