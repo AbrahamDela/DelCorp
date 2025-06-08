@@ -398,28 +398,25 @@ namespace DelCorp.Services
 
                         if (remoteEtapas.Any())
                         {
-                            await _localDatabase.DeleteEtapasByPresupuestoIdAsync(presupuestoId);
-                            System.Diagnostics.Debug.WriteLine("[GetEtapasByPresupuestoId] Etapas locales eliminadas para sincronización.");
-
                             foreach (var remoteEtapa in remoteEtapas)
                             {
                                 var dtoRemote = remoteEtapa.ToDto();
                                 var localEtapa = dtoRemote.ToLocal();
 
-                                // Asigna siempre el IdPresupuesto local recibido
                                 localEtapa.IdPresupuesto = presupuestoId;
-                                System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Asignando SIEMPRE IdPresupuesto local {presupuestoId} a etapa remota {localEtapa.Id}");
-
                                 localEtapa.IsSynced = true;
+
+                                var existingLocal = await _localDatabase.GetEtapaByServerIdAsync(remoteEtapa.Id);
+                                if (existingLocal != null)
+                                {
+                                    localEtapa.Id = existingLocal.Id;
+                                }
+
                                 await _localDatabase.SaveEtapaAsync(localEtapa);
-                                System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Etapa remota guardada localmente: Id={localEtapa.Id}, Actividad={localEtapa.IdActividadEtapa}, PresupuestoId={localEtapa.IdPresupuesto},");
                             }
 
-
                             // Recargar etapas locales
-                            System.Diagnostics.Debug.WriteLine($"Retornar etapas localmente del presupuesto ID: {presupuestoId}");
                             localEtapas = await _localDatabase.GetEtapasByPresupuestoIdAsync(presupuestoId);
-                            System.Diagnostics.Debug.WriteLine($"[GetEtapasByPresupuestoId] Etapas locales recargadas: {localEtapas.Count}");
                             dtoEtapas = localEtapas.ToDtoList();
                         }
                         else
@@ -850,9 +847,6 @@ namespace DelCorp.Services
 
                         if (remoteSubEtapas.Any())
                         {
-                            System.Diagnostics.Debug.WriteLine("[GetSubEtapasByEtapaId] Eliminando subetapas locales previas para sincronizar.");
-                            await _localDatabase.DeleteSubEtapasByEtapaIdAsync(etapaId);
-
                             foreach (var remoteSubEtapa in remoteSubEtapas)
                             {
                                 var dtoRemote = remoteSubEtapa.ToDto();
@@ -861,15 +855,17 @@ namespace DelCorp.Services
                                 localSubEtapa.IdEtapa = etapaId;
                                 localSubEtapa.IsSynced = true;
 
-                                System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Guardando subetapa remota localmente: Id={localSubEtapa.Id}, Actividad={localSubEtapa.ActividadSubEtapaId}, EtapaId={localSubEtapa.IdEtapa}");
+                                var existingLocal = await _localDatabase.GetLocalSubEtapaByIdAsync(remoteSubEtapa.Id);
+                                if (existingLocal != null)
+                                {
+                                    localSubEtapa.Id = existingLocal.Id;
+                                }
 
                                 await _localDatabase.SaveSubEtapaAsync(localSubEtapa);
                             }
 
                             // Recargar subetapas locales
-                            System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Recargando subetapas locales tras sincronización para EtapaId: {etapaId}");
                             localSubEtapas = await _localDatabase.GetSubEtapasByEtapaIdAsync(etapaId);
-                            System.Diagnostics.Debug.WriteLine($"[GetSubEtapasByEtapaId] Subetapas locales recargadas: {localSubEtapas.Count}");
                             dtoEtapas = localSubEtapas.Select(e => e.ToDto()).ToList();
                         }
                         else
@@ -1299,6 +1295,25 @@ namespace DelCorp.Services
             {
                 _logger.LogError(ex, $"Error deleting RecursoUti {recursoUtiId}.");
             }
+        }
+
+        // RegistroRecursoUti methods (local only)
+        public async Task<IEnumerable<RegistroRecursoUti>> GetRegistroRecursosUtiBySubEtapaIdAsync(long subEtapaId)
+        {
+            var localItems = await _localDatabase.GetRegistroRecursosUtiBySubEtapaIdAsync(subEtapaId);
+            return localItems.Select(l => RecursosMapper.ToDto(l)).OrderByDescending(r => r.FechaRecursoUti);
+        }
+
+        public async Task<RegistroRecursoUti> SaveRegistroRecursoUtiAsync(RegistroRecursoUti registro)
+        {
+            registro.CreatedAt = DateTime.UtcNow;
+            if (registro.CantidadRecursosUti.HasValue && registro.PrecioUniRecursosUti.HasValue)
+                registro.TotalRecursosUti = registro.CantidadRecursosUti.Value * registro.PrecioUniRecursosUti.Value;
+
+            var local = RecursosMapper.ToLocal(registro, isSynced: false);
+            await _localDatabase.SaveRegistroRecursoUtiAsync(local);
+            registro.Id = local.LocalId;
+            return registro;
         }
 
         public async Task SyncRecursosUtiAsync() //

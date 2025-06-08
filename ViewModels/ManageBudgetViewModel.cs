@@ -132,10 +132,16 @@ public partial class ManageBudgetViewModel : ObservableObject, IQueryAttributabl
             return;
         }
 
+        if (!int.TryParse(NumeroEtapa, out var numeroEtapaValue))
+        {
+            await Shell.Current.DisplayAlert("Error", "Número de etapa inválido", "OK");
+            return;
+        }
+
         // Crear nueva etapa
         var nuevaEtapa = new Etapa
         {
-            NumeroEtapa = int.Parse(NumeroEtapa),
+            NumeroEtapa = numeroEtapaValue,
             //ActividadEtapa = ActividadEtapa,
             //UnidadMedida = UnidadMedida,
             CantidadEtapa = CantidadEtapa,

@@ -22,6 +22,7 @@ public class LocalDatabaseService : IDisposable
         _database.CreateTableAsync<LocalUniMedRe>().Wait();
         _database.CreateTableAsync<LocalRecurso>().Wait();
         _database.CreateTableAsync<LocalRecursoUti>().Wait();
+        _database.CreateTableAsync<LocalRegistroRecursoUti>().Wait();
         _database.CreateTableAsync<LocalCategoriaActividad>().Wait();
         _database.CreateTableAsync<LocalActividad>().Wait();
     }
@@ -153,6 +154,25 @@ public class LocalDatabaseService : IDisposable
 
     public async Task SaveEtapaAsync(LocalEtapa etapa)
     {
+        // Try to update existing records when possible to avoid duplicates
+        if (etapa.Id != 0)
+        {
+            await _database.UpdateAsync(etapa);
+            return;
+        }
+
+        if (etapa.ServerId.HasValue)
+        {
+            var existing = await _database.Table<LocalEtapa>()
+                .FirstOrDefaultAsync(e => e.ServerId == etapa.ServerId.Value);
+            if (existing != null)
+            {
+                etapa.Id = existing.Id;
+                await _database.UpdateAsync(etapa);
+                return;
+            }
+        }
+
         await _database.InsertAsync(etapa);
     }
 
@@ -200,6 +220,24 @@ public class LocalDatabaseService : IDisposable
     }
     public async Task SaveSubEtapaAsync(LocalSubEtapa subEtapa)
     {
+        if (subEtapa.Id != 0)
+        {
+            await _database.UpdateAsync(subEtapa);
+            return;
+        }
+
+        if (subEtapa.ServerId.HasValue)
+        {
+            var existing = await _database.Table<LocalSubEtapa>()
+                .FirstOrDefaultAsync(x => x.ServerId == subEtapa.ServerId.Value);
+            if (existing != null)
+            {
+                subEtapa.Id = existing.Id;
+                await _database.UpdateAsync(subEtapa);
+                return;
+            }
+        }
+
         await _database.InsertAsync(subEtapa);
     }
 
@@ -340,6 +378,22 @@ public class LocalDatabaseService : IDisposable
 
     public async Task<List<LocalRecursoUti>> GetUnsyncedRecursosUtiAsync() =>
         await _database.Table<LocalRecursoUti>().Where(r => !r.IsSynced).ToListAsync();
+
+    // RegistroRecursoUti
+    public async Task<List<LocalRegistroRecursoUti>> GetRegistroRecursosUtiBySubEtapaIdAsync(long subEtapaId) =>
+        await _database.Table<LocalRegistroRecursoUti>().Where(r => r.IdSubEtapa == subEtapaId).ToListAsync();
+
+    public async Task SaveRegistroRecursoUtiAsync(LocalRegistroRecursoUti item)
+    {
+        if (item.LocalId != 0)
+        {
+            await _database.UpdateAsync(item);
+        }
+        else
+        {
+            await _database.InsertAsync(item);
+        }
+    }
 
     // Para LocalCategoriaActividad
     public async Task<List<LocalCategoriaActividad>> GetCategoriasActividadAsync() =>
