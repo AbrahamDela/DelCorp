@@ -805,6 +805,7 @@ namespace DelCorp.Services
                                 updatedLocal.IsSynced = true;
                                 await _localDatabase.SavePresupuestoAsync(updatedLocal);
                             }
+                            remoteDto.MontoEjePresupuesto = await GetTotalEjecutadoForPresupuestoAsync(remoteDto.Id);
                             return remoteDto;
                         }
                     }
@@ -818,7 +819,13 @@ namespace DelCorp.Services
                     }
                 }
 
-                return localPresupuesto?.ToDto();
+                if (localPresupuesto != null)
+                {
+                    var dto = localPresupuesto.ToDto();
+                    dto.MontoEjePresupuesto = await GetTotalEjecutadoForPresupuestoAsync(dto.Id);
+                    return dto;
+                }
+                return null;
             }
             catch (Exception ex)
             {
