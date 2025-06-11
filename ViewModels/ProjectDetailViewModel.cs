@@ -18,6 +18,9 @@ public partial class ProjectDetailViewModel : ObservableObject, IQueryAttributab
 
     [ObservableProperty]
     private Project _project;
+    [ObservableProperty]
+    private int _projectId;
+
 
     [ObservableProperty]
     private ObservableCollection<Presupuesto> _presupuestos;
@@ -41,6 +44,7 @@ public partial class ProjectDetailViewModel : ObservableObject, IQueryAttributab
     {
         // Obtener el proyecto por ID con el metodo de _dataService
         Project = await _dataService.GetProject(id);
+        ProjectId = id;
 
         // Si el proyecto no se encuentra navegar hacia atrás y mostrar un mensaje de error
         if (Project == null)
@@ -165,5 +169,12 @@ public partial class ProjectDetailViewModel : ObservableObject, IQueryAttributab
             Debug.WriteLine($"Error al eliminar el proyecto: {ex.Message}");
             await Shell.Current.DisplayAlert("Error", "Ocurrió un error al eliminar el proyecto.", "OK");
         }
+    }
+
+    [RelayCommand]
+    private async Task EditProject()
+    {
+        if (ProjectId == 0) return;
+        await Shell.Current.GoToAsync($"{nameof(EditProjectPage)}?id={ProjectId}");
     }
 }

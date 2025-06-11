@@ -10,7 +10,9 @@ namespace DelCorp
 
             RegisterForRoute<AddProjectPage>();
             RegisterForRoute<ProjectDetailPage>();
+            RegisterForRoute<EditProjectPage>();
             RegisterForRoute<RegistrarPresupuestoPage>();
+            RegisterForRoute<EditPresupuestoPage>();
             RegisterForRoute<RegistrarEtapaPage>();
             RegisterForRoute<RegistrarSubEtapaPage>();
             RegisterForRoute<RegistrarRecursoUtiPage>();

@@ -127,6 +127,7 @@
                 </CollectionView.ItemTemplate>
             </CollectionView>
 
+            <Button Text="Editar Proyecto" Command="{Binding EditProjectCommand}" />
             <Button
                 Text="Eliminar Proyecto"
                 Command="{Binding DeleteProjectCommand}"
