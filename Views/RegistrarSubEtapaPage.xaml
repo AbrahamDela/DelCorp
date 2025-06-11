@@ -75,8 +75,9 @@
                                 <Label Grid.Row="1" Grid.Column="0" Text="{Binding CantidadSubEtapa, StringFormat='Cantidad: {0:N2}'}" />
                                 <Label Grid.Row="2" Grid.Column="0" Text="{Binding TotalSubEstapa, StringFormat='Total Calculado: C{0:C}'}" />
 
-                                <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Text="Añadir/Ver Recursos"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarSubEtapaViewModel}}, Path=NavigateToRegistrarRecursosCommand}"
+                                <Label Grid.Row="3" Grid.Column="0" Text="{Binding MontoEjeSubEtapa, StringFormat='Ejecutado: {0:C}'}" TextColor="Green" />
+                                <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Text="Registrar Uso de Recursos"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarSubEtapaViewModel}}, Path=NavigateToRegistroRecursosCommand}"
                                         CommandParameter="{Binding .}" Margin="0,5,0,0"/>
                             </Grid>
                         </Frame>
