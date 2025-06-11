@@ -160,7 +160,7 @@ public partial class RegistrarPresupuestoViewModel : ObservableObject
 
             if (presupuestoGuardado != null)
             {
-                await Shell.Current.DisplayAlert("Éxito", $"El presupuesto se guardó correctamente. {presupuestoGuardado.Id}", "OK");
+                await Shell.Current.DisplayAlert("Éxito", $"El presupuesto se guardó correctamente.", "OK");
                 // Navega a la página de registrar etapa con el ID del presupuesto guardado
                 await NavigateToRegisterEtapa(presupuestoGuardado);
             }
