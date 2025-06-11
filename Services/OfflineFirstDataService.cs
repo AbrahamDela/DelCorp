@@ -1646,5 +1646,78 @@ namespace DelCorp.Services
 
             return syncedDto ?? actividad; // Devolver el DTO sincronizado si está disponible, sino el original (que ahora podría tener ID)
         }
+
+        // ----- RegistroRecursoUti -----
+        public async Task<IEnumerable<RegistroRecursoUti>> GetRegistrosRecursoUtiBySubEtapaIdAsync(long subEtapaId)
+        {
+            var localItems = await _localDatabase.GetRegistrosRecursoUtiBySubEtapaIdAsync(subEtapaId);
+            var dtos = localItems.Select(l => RegistroRecursoUtiMapper.ToDto(l)).ToList();
+
+            var recursos = await GetRecursosAsync();
+            var unis = await GetUniMedReAsync();
+            foreach (var dto in dtos)
+            {
+                if (dto.IdRecurso.HasValue)
+                    dto.Recurso = recursos.FirstOrDefault(r => r.Id == dto.IdRecurso.Value);
+                if (dto.IdUniMedida.HasValue)
+                    dto.UniMedRe = unis.FirstOrDefault(u => u.Id == dto.IdUniMedida.Value);
+            }
+
+            return dtos.OrderByDescending(d => d.CreatedAt);
+        }
+
+        public async Task<RegistroRecursoUti> SaveRegistroRecursoUtiAsync(RegistroRecursoUti registro)
+        {
+            registro.CreatedAt = DateTime.UtcNow;
+            if (registro.CantidadRecursosUti.HasValue && registro.PrecioUniRecursosUti.HasValue)
+                registro.TotalRecursosUti = registro.CantidadRecursosUti * registro.PrecioUniRecursosUti;
+
+            var local = RegistroRecursoUtiMapper.ToLocal(registro, isSynced: false);
+            if (registro.Id == 0) local.LocalId = 0;
+            await _localDatabase.SaveRegistroRecursoUtiAsync(local);
+            registro.Id = local.ServerId ?? local.LocalId;
+            return registro;
+        }
+
+        public async Task DeleteRegistroRecursoUtiAsync(long registroId)
+        {
+            var localItem = await _localDatabase.GetLocalRegistroRecursoUtiByServerIdAsync(registroId)
+                            ?? await _localDatabase.GetLocalRegistroRecursoUtiByLocalIdAsync(registroId);
+            if (localItem != null)
+            {
+                await _localDatabase.DeleteRegistroRecursoUtiByLocalIdAsync(localItem.LocalId);
+            }
+        }
+
+        public async Task UpdateExecutionTotalsForSubEtapaAsync(long subEtapaId)
+        {
+            var registros = await GetRegistrosRecursoUtiBySubEtapaIdAsync(subEtapaId);
+            decimal totalSub = registros.Sum(r => r.TotalRecursosUti ?? 0m);
+
+            var localSub = await _localDatabase.GetLocalSubEtapaByIdAsync(subEtapaId);
+            if (localSub != null)
+            {
+                localSub.MontoEjeSubEtapa = totalSub;
+                await _localDatabase.SaveSubEtapaAsync(localSub);
+
+                var subEtapas = await _localDatabase.GetSubEtapasByEtapaIdAsync(localSub.IdEtapa);
+                decimal totalEtapa = subEtapas.Sum(se => se.MontoEjeSubEtapa ?? 0m);
+                var etapa = await _localDatabase.GetEtapaByIdAsync(localSub.IdEtapa);
+                if (etapa != null)
+                {
+                    etapa.MontoEjeEtapa = totalEtapa;
+                    await _localDatabase.SaveEtapaAsync(etapa);
+
+                    var etapas = await _localDatabase.GetEtapasByPresupuestoIdAsync(etapa.IdPresupuesto);
+                    decimal totalPres = etapas.Sum(e => e.MontoEjeEtapa ?? 0m);
+                    var presupuesto = await _localDatabase.GetPresupuestoByIdAsync(etapa.IdPresupuesto);
+                    if (presupuesto != null)
+                    {
+                        presupuesto.MontoEjePresupuesto = totalPres;
+                        await _localDatabase.SavePresupuestoAsync(presupuesto);
+                    }
+                }
+            }
+        }
     }
 }

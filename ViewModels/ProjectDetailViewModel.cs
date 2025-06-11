@@ -20,12 +20,17 @@ public partial class ProjectDetailViewModel : ObservableObject, IQueryAttributab
     private Project _project;
 
     [ObservableProperty]
-    private ObservableCollection<Presupuesto> _presupuestos;
+    private ObservableCollection<Presupuesto> _presupuestos = new();
+
+    [ObservableProperty]
+    private Presupuesto _selectedPresupuesto;
+    
+    [ObservableProperty]
+    private ObservableCollection<Etapa> _etapasDelPresupuesto = new();
 
     public ProjectDetailViewModel(IDataService dataService)
     {
         _dataService = dataService;
-        _presupuestos = new ObservableCollection<Presupuesto>();
     }
 
     public async void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -51,15 +56,12 @@ public partial class ProjectDetailViewModel : ObservableObject, IQueryAttributab
 
         // Cargar presupuestos del proyecto
         await LoadPresupuestos(id);
+        if (Presupuestos.Any())
+        {
+            SelectedPresupuesto = Presupuestos.First();
+        }
 
-        if (Project.LatitudProyecto != null && Project.LongitudProyecto != null)
-        {
-            VisibleMap = true;
-        }
-        else
-        {
-            VisibleMap = false;
-        }
+        VisibleMap = Project.LatitudProyecto != null && Project.LongitudProyecto != null;
     }
 
     // Método para abrir ubicación en mapa si está disponible
@@ -129,5 +131,31 @@ public partial class ProjectDetailViewModel : ObservableObject, IQueryAttributab
                 "OK"
             );
         }
+    }
+
+    async partial void OnSelectedPresupuestoChanged(Presupuesto value)
+    {
+        EtapasDelPresupuesto.Clear();
+        if (value != null)
+        {
+            await LoadEtapasForPresupuesto(value.Id);
+        }
+    }
+
+    private async Task LoadEtapasForPresupuesto(long presupuestoId)
+    {
+        var etapas = await _dataService.GetEtapasByPresupuestoId((int)presupuestoId);
+        EtapasDelPresupuesto.Clear();
+        foreach (var etapa in etapas)
+        {
+            EtapasDelPresupuesto.Add(etapa);
+        }
+    }
+
+    [RelayCommand]
+    private async Task NavigateToRegistrarEjecucion(SubEtapa subEtapa)
+    {
+        if (subEtapa == null) return;
+        await Shell.Current.GoToAsync($"{nameof(RegistrarRecursoEjecutadoPage)}?idSubEtapa={subEtapa.Id}");
     }
 }
