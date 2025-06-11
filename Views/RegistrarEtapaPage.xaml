@@ -9,11 +9,36 @@
     <ContentPage.Resources>
         <ResourceDictionary>
             <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+            <converters:BudgetProgressConverter x:Key="BudgetProgressConverter" />
+            <converters:SaldoRestanteConverter x:Key="SaldoRestanteConverter" />
         </ResourceDictionary>
     </ContentPage.Resources>
 
     <ScrollView>
         <VerticalStackLayout Spacing="10" Padding="20">
+
+            <Frame Padding="15" Margin="10" CornerRadius="10" BorderColor="CornflowerBlue">
+                <VerticalStackLayout>
+                    <Label Text="{Binding CurrentPresupuesto.NombrePresupuesto}" FontSize="Title" FontAttributes="Bold" />
+
+                    <HorizontalStackLayout Margin="0,10">
+                        <Label Text="Presupuesto Total:" FontAttributes="Bold" />
+                        <Label Text="{Binding CurrentPresupuesto.TotalPresupuesto, StringFormat=' {0:C}'}" />
+                    </HorizontalStackLayout>
+
+                    <HorizontalStackLayout>
+                        <Label Text="Total Gastado:" FontAttributes="Bold" />
+                        <Label Text="{Binding CurrentPresupuesto.MontoEjePresupuesto, StringFormat=' {0:C}'}" />
+                    </HorizontalStackLayout>
+
+                    <ProgressBar Progress="{Binding CurrentPresupuesto, Converter={StaticResource BudgetProgressConverter}}" Margin="0,10,0,0" />
+
+                    <HorizontalStackLayout Margin="0,5,0,0">
+                        <Label Text="Saldo Restante:" FontAttributes="Bold" />
+                        <Label Text="{Binding CurrentPresupuesto, Converter={StaticResource SaldoRestanteConverter}, StringFormat=' {0:C}'}" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
 
             <Label Text="Registrar Nueva Etapa" FontAttributes="Bold" FontSize="Medium"/>
 

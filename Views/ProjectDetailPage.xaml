@@ -3,8 +3,17 @@
              x:Class="DelCorp.Views.ProjectDetailPage"
              xmlns:viewmodel="clr-namespace:DelCorp.ViewModels"
              xmlns:models="clr-namespace:DelCorp.Models"
+             xmlns:converters="clr-namespace:DelCorp.Converters"
              Title="Detalles del Proyecto"
              x:DataType="viewmodel:ProjectDetailViewModel">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:BudgetProgressConverter x:Key="BudgetProgressConverter" />
+            <converters:SaldoRestanteConverter x:Key="SaldoRestanteConverter" />
+            <converters:GastoToColorConverter x:Key="GastoToColorConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
 
     <ScrollView>
         <VerticalStackLayout Spacing="15" Padding="20">
@@ -97,30 +106,27 @@
 
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Presupuesto">
-                        <Frame Margin="0,5" Padding="10" BorderColor="LightGray">
-                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
-                                <Label 
-                                    Grid.Row="0" Grid.Column="0"
-                                    Text="{Binding NombrePresupuesto}" 
-                                    FontAttributes="Bold"/>
+                        <Frame Padding="10" Margin="10,5" CornerRadius="10" BorderColor="LightGray">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+                                <Label Grid.Row="0" Grid.Column="0" Text="{Binding NombrePresupuesto}" FontSize="Medium" FontAttributes="Bold" />
+                                <Label Grid.Row="0" Grid.Column="1" Text="{Binding Id, StringFormat='ID: {0}'}" FontSize="Small" />
 
-                                <Label 
-                                    Grid.Row="1" Grid.Column="0"
-                                    Text="Total Presupuesto:" 
-                                    FontSize="12"/>
-                                <Label 
-                                    Grid.Row="1" Grid.Column="1"
-                                    Text="{Binding TotalPresupuesto, StringFormat='C${0:N2}'}" 
-                                    FontAttributes="Bold"/>
+                                <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5">
+                                    <Label Text="Presupuesto: " FontAttributes="Bold" />
+                                    <Label Text="{Binding TotalPresupuesto, StringFormat='{0:C}'}" />
+                                    <Label Text=" | Gastado: " FontAttributes="Bold" Margin="10,0,0,0" />
+                                    <Label Text="{Binding MontoEjePresupuesto, StringFormat='{0:C}'}"
+                                           TextColor="{Binding ., Converter={StaticResource GastoToColorConverter}}" />
+                                </HorizontalStackLayout>
 
-                                <Label 
-                                    Grid.Row="2" Grid.Column="0"
-                                    Text="Progreso:" 
-                                    FontSize="12"/>
-                                <Label 
-                                    Grid.Row="2" Grid.Column="1"
-                                    Text="{Binding ProgresoPresupuesto, StringFormat='{0:P0}'}" 
-                                    TextColor="{StaticResource Primary}"/>
+                                <ProgressBar Grid.Row="2" Grid.ColumnSpan="2"
+                                             Progress="{Binding ., Converter={StaticResource BudgetProgressConverter}}"
+                                             ProgressColor="MediumBlue" />
+
+                                <HorizontalStackLayout Grid.Row="3" Grid.ColumnSpan="2" Margin="0,5">
+                                    <Label Text="Saldo: " FontAttributes="Bold" />
+                                    <Label Text="{Binding ., Converter={StaticResource SaldoRestanteConverter}, StringFormat='{0:C}'}" />
+                                </HorizontalStackLayout>
                             </Grid>
                         </Frame>
                     </DataTemplate>

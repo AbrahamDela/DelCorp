@@ -92,6 +92,7 @@ namespace DelCorp.ViewModels
                 }
                 foreach (var item in paged)
                 {
+                    item.MontoEjePresupuesto = await _dataService.GetTotalEjecutadoForPresupuestoAsync(item.Id);
                     if (!Presupuestos.Any(p => p.Id == item.Id))
                         Presupuestos.Add(item);
                 }
