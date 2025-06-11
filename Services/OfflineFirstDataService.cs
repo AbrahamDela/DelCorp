@@ -585,6 +585,8 @@ namespace DelCorp.Services
             {
                 if (presupuesto.Id == 0)
                 {
+                    // Asignar un Id temporal para evitar registros con valor 0
+                    presupuesto.Id = GenerarIdAleatorio();
                     presupuesto.CreatedAt = DateTime.Now;
                 }
 

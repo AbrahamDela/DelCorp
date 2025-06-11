@@ -145,9 +145,10 @@ public partial class RegistrarPresupuestoViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            // Crear el objeto Presupuesto sin asignar un Id
+            // Crear el objeto Presupuesto asignando un Id temporal aleatorio
             var presupuesto = new Presupuesto
             {
+                Id = OfflineFirstDataService.GenerarIdAleatorio(),
                 NombrePresupuesto = NombrePresupuesto,
                 FechaInicioPresupuesto = FechaInicioPresupuesto,
                 FechaFinPresupuesto = FechaFinPresupuesto,
