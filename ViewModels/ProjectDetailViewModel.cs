@@ -130,4 +130,40 @@ public partial class ProjectDetailViewModel : ObservableObject, IQueryAttributab
             );
         }
     }
+
+    [RelayCommand]
+    private async Task DeleteProject()
+    {
+        if (Project == null)
+            return;
+
+        bool confirmed = await Shell.Current.DisplayAlert(
+            "Confirmar Eliminación",
+            $"¿Estás seguro de que quieres eliminar el proyecto '{Project.NombreProyecto}'? Esta acción no se puede deshacer.",
+            "Sí, Eliminar",
+            "Cancelar");
+
+        if (!confirmed)
+            return;
+
+        try
+        {
+            bool success = await _dataService.DeleteProject(Project.Id);
+
+            if (success)
+            {
+                await Shell.Current.DisplayAlert("Éxito", "El proyecto ha sido eliminado.", "OK");
+                await Shell.Current.GoToAsync("..");
+            }
+            else
+            {
+                await Shell.Current.DisplayAlert("Error", "No se pudo eliminar el proyecto.", "OK");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error al eliminar el proyecto: {ex.Message}");
+            await Shell.Current.DisplayAlert("Error", "Ocurrió un error al eliminar el proyecto.", "OK");
+        }
+    }
 }
