@@ -99,9 +99,12 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
         IdPresupuesto = presupuestoId;
         Debug.WriteLine($"[RegistrarEtapaVM] Inicializando con IdPresupuesto: {IdPresupuesto}");
         CurrentPresupuesto = await _dataService.GetPresupuestoByIdAsync(presupuestoId);
+
         if (CurrentPresupuesto != null)
         {
-            CurrentPresupuesto.MontoEjePresupuesto = await _dataService.GetTotalEjecutadoForPresupuestoAsync(CurrentPresupuesto.Id);
+            // Calcula y asigna el monto ejecutado al presupuesto actual
+            CurrentPresupuesto.MontoEjePresupuesto = await _dataService.GetTotalEjecutadoForPresupuestoAsync(presupuestoId);
+            OnPropertyChanged(nameof(CurrentPresupuesto));
         }
         SetIsBusy(true);
         try
