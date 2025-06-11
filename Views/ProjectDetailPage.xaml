@@ -84,7 +84,7 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <CollectionView 
+            <CollectionView
                 ItemsSource="{Binding Presupuestos}"
                 HeightRequest="300"
                 SelectionMode="None">
@@ -126,6 +126,14 @@
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
+
+            <Button
+                Text="Eliminar Proyecto"
+                Command="{Binding DeleteProjectCommand}"
+                BackgroundColor="Red"
+                TextColor="White"
+                HorizontalOptions="FillAndExpand"
+                Margin="0,20,0,0" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>
