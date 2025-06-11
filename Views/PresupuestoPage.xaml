@@ -56,7 +56,6 @@
                             </Grid.GestureRecognizers>
 
                             <Label Grid.Row="0" Grid.Column="0" Text="{Binding NombrePresupuesto}" FontSize="Medium" FontAttributes="Bold" />
-                            <Label Grid.Row="0" Grid.Column="1" Text="{Binding Id, StringFormat='ID: {0}'}" FontSize="Small" />
 
                             <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5">
                                 <Label Text="Presupuesto: " FontAttributes="Bold" />
