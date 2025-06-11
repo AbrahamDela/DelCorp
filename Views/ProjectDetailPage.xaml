@@ -98,11 +98,6 @@
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Presupuesto">
                         <Frame Margin="0,5" Padding="10" BorderColor="LightGray">
-                            <Frame.GestureRecognizers>
-                                <TapGestureRecognizer 
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:ProjectDetailViewModel}}, Path=SelectPresupuestoCommand}"
-                                    CommandParameter="{Binding .}"/>
-                            </Frame.GestureRecognizers>
                             <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
                                 <Label 
                                     Grid.Row="0" Grid.Column="0"

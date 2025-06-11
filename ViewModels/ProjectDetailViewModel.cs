@@ -130,11 +130,4 @@ public partial class ProjectDetailViewModel : ObservableObject, IQueryAttributab
             );
         }
     }
-
-    [RelayCommand]
-    private async Task SelectPresupuesto(Presupuesto presupuesto)
-    {
-        if (presupuesto == null) return;
-        await Shell.Current.GoToAsync($"{nameof(RegistrarEtapaPage)}?id={presupuesto.Id}");
-    }
 }
