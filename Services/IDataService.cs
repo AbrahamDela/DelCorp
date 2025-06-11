@@ -18,6 +18,7 @@ namespace DelCorp.Services
         Task<IEnumerable<Presupuesto>> GetPresupuestosByProjectId(int projectId);
         Task<IEnumerable<Presupuesto>> GetAllPresupuestos();
         Task<bool> DeletePresupuesto(long presupuestoId);
+        Task<Presupuesto> GetPresupuestoByIdAsync(long presupuestoId);
 
 
         //Etapas de presupuestos
