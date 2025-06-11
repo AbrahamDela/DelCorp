@@ -62,5 +62,8 @@ namespace DelCorp.Services
         Task<IEnumerable<RegistroRecursoUti>> GetRegistrosRecursosUtiBySubEtapaIdAsync(long subEtapaId);
         Task<RegistroRecursoUti> SaveRegistroRecursoUtiAsync(RegistroRecursoUti registro);
         Task DeleteRegistroRecursoUtiAsync(long registroId);
+
+        // Obtiene la suma total de los recursos utilizados para un presupuesto
+        Task<decimal> GetTotalEjecutadoForPresupuestoAsync(long presupuestoId);
     }
 }

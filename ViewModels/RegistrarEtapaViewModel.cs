@@ -302,7 +302,7 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
             // Podríamos resetear HasPendingOrderChanges aquí si no se guardan.
             // HasPendingOrderChanges = false; // Si continúan sin guardar
         }
-        await Shell.Current.GoToAsync($"RegistrarSubEtapaPage?idEtapa={etapa.Id}");
+        await Shell.Current.GoToAsync($"{nameof(RegistrarSubEtapaPage)}?idEtapa={etapa.Id}&idPresupuesto={IdPresupuesto}");
     }
 
     partial void OnSelectedActividadChanged(Actividad oldValue, Actividad newValue)

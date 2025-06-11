@@ -16,6 +16,9 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
     private readonly IDataService _dataService;
 
     [ObservableProperty] private long _idEtapa;
+
+    // Id del presupuesto al que pertenece la etapa actual
+    [ObservableProperty] private long _idPresupuesto;
     [ObservableProperty] private decimal? _cantidadSubEtapa;
     [ObservableProperty] private decimal? _precioUniSubEtapa;
     [ObservableProperty] private decimal? _totalSubEstapa;
@@ -111,6 +114,12 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
 
     public async void ApplyQueryAttributes(IDictionary<string, object> query)
     {
+        // Leer IdPresupuesto si viene en la navegación
+        if (query.TryGetValue("idPresupuesto", out var idPresupuestoObj) && long.TryParse(idPresupuestoObj.ToString(), out var idPresupuestoVal))
+        {
+            IdPresupuesto = idPresupuestoVal;
+        }
+
         if (query.TryGetValue("idEtapa", out var idObj) && long.TryParse(idObj.ToString(), out var etapaIdVal))
         {
             bool needsFullLoadOrDifferentEtapa = IdEtapa != etapaIdVal;
@@ -423,7 +432,7 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
     private async Task NavigateToRegistrarAvanceAsync(SubEtapa subEtapa)
     {
         if (subEtapa == null || subEtapa.Id == 0) return;
-        await Shell.Current.GoToAsync($"RegistrarAvancePage?idSubEtapa={subEtapa.Id}");
+        await Shell.Current.GoToAsync($"{nameof(RegistrarAvancePage)}?idSubEtapa={subEtapa.Id}&idPresupuesto={IdPresupuesto}");
     }
 
     // --- MÉTODOS Y COMANDOS PARA REORDENAMIENTO OPTIMIZADO DE SUBETAPAS ---

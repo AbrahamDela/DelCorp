@@ -5,6 +5,8 @@ using DelCorp.Services.Mapping;
 using Supabase;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Collections.Generic;
+using System.Linq;
 using Postgrest.Responses;
 using Supabase.Interfaces;
 
@@ -1728,6 +1730,42 @@ namespace DelCorp.Services
                                          .Filter("id_registro_recurso_uti", Postgrest.Constants.Operator.Equals, registroId)
                                          .Delete();
             }
+        }
+
+        public async Task<decimal> GetTotalEjecutadoForPresupuestoAsync(long presupuestoId)
+        {
+            decimal totalGeneral = 0;
+            try
+            {
+                var etapas = await _localDatabase.GetEtapasByPresupuestoIdAsync(presupuestoId);
+                var idEtapas = etapas.Select(e => e.Id).ToList();
+
+                if (!idEtapas.Any()) return 0;
+
+                var subEtapas = new List<LocalSubEtapa>();
+                foreach (var idEtapa in idEtapas)
+                {
+                    var subs = await _localDatabase.GetSubEtapasByEtapaIdAsync(idEtapa);
+                    subEtapas.AddRange(subs);
+                }
+                var idSubEtapas = subEtapas.Select(s => s.Id).ToList();
+
+                if (!idSubEtapas.Any()) return 0;
+
+                var registros = new List<LocalRegistroRecursoUti>();
+                foreach (var idSubEtapa in idSubEtapas)
+                {
+                    var regs = await _localDatabase.GetRegistrosRecursosUtiBySubEtapaIdAsync(idSubEtapa);
+                    registros.AddRange(regs);
+                }
+
+                totalGeneral = registros.Sum(r => r.TotalRecursosUti ?? 0);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculando el total ejecutado para el presupuesto {PresupuestoId}", presupuestoId);
+            }
+            return totalGeneral;
         }
     }
 }
