@@ -39,17 +39,6 @@
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="model:Project">
                     <SwipeView>
-                        <!-- Opciones de deslizamiento -->
-                        <SwipeView.RightItems>
-                            <SwipeItems>
-                                <SwipeItem 
-                                    Text="Eliminar" 
-                                    BackgroundColor="{StaticResource Error}"
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:ProjectViewModel}}, 
-                                                     Path=DeleteProjectCommand}"
-                                    CommandParameter="{Binding .}"/>
-                            </SwipeItems>
-                        </SwipeView.RightItems>
                         <Frame 
                         BorderColor="LightGray"
                         Margin="0,5"

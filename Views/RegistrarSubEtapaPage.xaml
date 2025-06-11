@@ -53,7 +53,7 @@
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:SubEtapa">
                         <Frame Padding="10" Margin="0,5" CornerRadius="5" BorderColor="LightGray">
-                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="5">
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="6">
                                 <Label Grid.Row="0" Grid.Column="0" FontAttributes="Bold">
                                     <Label.FormattedText>
                                         <FormattedString>
@@ -75,12 +75,24 @@
                                 <Label Grid.Row="1" Grid.Column="0" Text="{Binding CantidadSubEtapa, StringFormat='Cantidad: {0:N2}'}" />
                                 <Label Grid.Row="2" Grid.Column="0" Text="{Binding TotalSubEstapa, StringFormat='Total Calculado: C{0:C}'}" />
 
-                                <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Text="Añadir/Ver Recursos"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarSubEtapaViewModel}}, Path=NavigateToRegistrarRecursosCommand}"
-                                        CommandParameter="{Binding .}" Margin="0,5,0,0"/>
-                                <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Text="Registrar Avance" BackgroundColor="Orange"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarSubEtapaViewModel}}, Path=NavigateToRegistrarAvanceCommand}"
-                                        CommandParameter="{Binding .}" Margin="0,5,0,0"/>
+                                <HorizontalStackLayout Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Spacing="8">
+                                    <Button Text="Añadir Recursos"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarSubEtapaViewModel}}, Path=NavigateToRegistrarRecursosCommand}"
+                                            CommandParameter="{Binding .}" 
+                                            FontSize="13"
+                                            CornerRadius="6"
+                                            BackgroundColor="#2979ff"
+                                            TextColor="White"
+                                            Padding="7,2"/>
+                                    <Button Text="Registrar Avance"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarSubEtapaViewModel}}, Path=NavigateToRegistrarAvanceCommand}"
+                                            CommandParameter="{Binding .}"
+                                            BackgroundColor="#fb8c00"
+                                            TextColor="White"
+                                            FontSize="13"
+                                            CornerRadius="6"
+                                            Padding="7,2"/>
+                                </HorizontalStackLayout>
                             </Grid>
                         </Frame>
                     </DataTemplate>
