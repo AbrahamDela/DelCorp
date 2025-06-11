@@ -139,7 +139,9 @@ namespace DelCorp.Services.Mapping
         {
             return new Presupuesto
             {
-                Id = localPresupuesto.ServerId ?? localPresupuesto.Id,
+                Id = (localPresupuesto.ServerId.HasValue && localPresupuesto.ServerId.Value > 0)
+                    ? localPresupuesto.ServerId.Value
+                    : localPresupuesto.Id,
                 CreatedAt = localPresupuesto.CreatedAt,
                 NombrePresupuesto = localPresupuesto.NombrePresupuesto,
                 TotalPresupuesto = localPresupuesto.TotalPresupuesto,
@@ -157,7 +159,7 @@ namespace DelCorp.Services.Mapping
         {
             return new LocalPresupuesto
             {
-                ServerId = presupuesto.Id,
+                ServerId = presupuesto.Id > 0 ? (long?)presupuesto.Id : null,
                 CreatedAt = presupuesto.CreatedAt,
                 NombrePresupuesto = presupuesto.NombrePresupuesto,
                 TotalPresupuesto = presupuesto.TotalPresupuesto,
