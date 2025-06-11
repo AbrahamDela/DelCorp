@@ -3,10 +3,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodel="clr-namespace:DelCorp.ViewModels"
              xmlns:model="clr-namespace:DelCorp.Models"
+             xmlns:converters="clr-namespace:DelCorp.Converters"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="DelCorp.Views.PresupuestoPage"
              Title="Presupuestos"
              x:DataType="viewmodel:PresupuestoViewModel">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:BudgetProgressConverter x:Key="BudgetProgressConverter" />
+            <converters:SaldoRestanteConverter x:Key="SaldoRestanteConverter" />
+            <converters:GastoToColorConverter x:Key="GastoToColorConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
 
     <ContentPage.Behaviors>
         <toolkit:EventToCommandBehavior Command="{Binding RefreshPresupuestosCommand}" EventName="Appearing" />
@@ -38,51 +47,33 @@
 
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="model:Presupuesto">
-                    <Frame
-                        BorderColor="LightGray"
-                        Margin="0,5"
-                        Padding="15">
-                        <Grid RowDefinitions="Auto,Auto,Auto">
+                    <Frame Padding="10" Margin="10,5" CornerRadius="10" BorderColor="LightGray">
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto">
                             <Grid.GestureRecognizers>
-                                <TapGestureRecognizer 
+                                <TapGestureRecognizer
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:PresupuestoViewModel}}, Path=NavigateToPresupuestoDetailsCommand}"
                                     CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
-                            <Label 
-                                Grid.Row="0"
-                                Style="{StaticResource TitleSmall}"
-                                Text="{Binding NombrePresupuesto}" />
-                            <Grid 
-                                Grid.Row="1" 
-                                ColumnDefinitions="*,*" 
-                                Margin="0,10,0,0">
-                                                    
-                                    <StackLayout Grid.Column="0">
-                                        <Label Style="{StaticResource LabelSmall}" Text="Fecha Inicio" />
-                                        <Label Text="{Binding FechaInicioPresupuesto, StringFormat='{0:dd/MM/yyyy}'}"
-                                               Style="{StaticResource BodySmall}" />
-                                    </StackLayout>
-                                    <StackLayout Grid.Column="1">
-                                        <Label Style="{StaticResource LabelSmall}" Text="Fecha Fin"/>
-                                        <Label Text="{Binding FechaFinPresupuesto, StringFormat='{0:dd/MM/yyyy}'}"
-                                               Style="{StaticResource BodySmall}" />
-                                    </StackLayout>  
-                            </Grid>
-                            <Grid Grid.Row="2" ColumnDefinitions="*,*,*"
-                                  Margin="0,10,0,0">
-                                <StackLayout Grid.Column="0">
-                                    <Label Style="{StaticResource LabelSmall}" Text="Total" />
-                                    <Label Text="{Binding TotalPresupuesto, StringFormat='C$ {0:N2}'}" Style="{StaticResource BodySmall}" />
-                                </StackLayout>
-                                <StackLayout Grid.Column="1">
-                                    <Label Style="{StaticResource LabelSmall}" Text="Ejecutado" />
-                                    <Label Text="{Binding MontoEjePresupuesto, StringFormat='C$ {0:N2}'}" Style="{StaticResource BodySmall}" />
-                                </StackLayout>
-                                <StackLayout Grid.Column="2">
-                                    <Label Style="{StaticResource LabelSmall}" Text="Progreso" />
-                                    <Label Text="{Binding ProgresoPresupuesto, StringFormat='{0:P0}'}" Style="{StaticResource BodySmall}" />
-                                </StackLayout>
-                            </Grid>
+
+                            <Label Grid.Row="0" Grid.Column="0" Text="{Binding NombrePresupuesto}" FontSize="Medium" FontAttributes="Bold" />
+                            <Label Grid.Row="0" Grid.Column="1" Text="{Binding Id, StringFormat='ID: {0}'}" FontSize="Small" />
+
+                            <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5">
+                                <Label Text="Presupuesto: " FontAttributes="Bold" />
+                                <Label Text="{Binding TotalPresupuesto, StringFormat='{0:C}'}" />
+                                <Label Text=" | Gastado: " FontAttributes="Bold" Margin="10,0,0,0" />
+                                <Label Text="{Binding MontoEjePresupuesto, StringFormat='{0:C}'}"
+                                       TextColor="{Binding ., Converter={StaticResource GastoToColorConverter}}" />
+                            </HorizontalStackLayout>
+
+                            <ProgressBar Grid.Row="2" Grid.ColumnSpan="2"
+                                         Progress="{Binding ., Converter={StaticResource BudgetProgressConverter}}"
+                                         ProgressColor="MediumBlue" />
+
+                            <HorizontalStackLayout Grid.Row="3" Grid.ColumnSpan="2" Margin="0,5">
+                                <Label Text="Saldo: " FontAttributes="Bold" />
+                                <Label Text="{Binding ., Converter={StaticResource SaldoRestanteConverter}, StringFormat='{0:C}'}" />
+                            </HorizontalStackLayout>
                         </Grid>
                     </Frame>
                 </DataTemplate>

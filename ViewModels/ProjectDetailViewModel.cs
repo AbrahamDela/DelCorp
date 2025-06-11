@@ -118,6 +118,7 @@ public partial class ProjectDetailViewModel : ObservableObject, IQueryAttributab
             {
                 foreach (var presupuesto in presupuestosList)
                 {
+                    presupuesto.MontoEjePresupuesto = await _dataService.GetTotalEjecutadoForPresupuestoAsync(presupuesto.Id);
                     Presupuestos.Add(presupuesto);
                 }
             }
