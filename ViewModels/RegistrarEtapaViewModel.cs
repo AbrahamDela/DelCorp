@@ -582,4 +582,11 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
             SetIsBusy(false);
         }
     }
+
+    [RelayCommand]
+    private async Task EditPresupuesto()
+    {
+        if (IdPresupuesto == 0) return;
+        await Shell.Current.GoToAsync($"{nameof(EditPresupuestoPage)}?id={IdPresupuesto}");
+    }
 }
