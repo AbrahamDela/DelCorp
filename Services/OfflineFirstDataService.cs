@@ -583,26 +583,46 @@ namespace DelCorp.Services
         {
             try
             {
-                if (presupuesto.Id == 0)
+                // Paso 1: Buscar el registro local existente usando el ID del presupuesto DTO.
+                // El ID del DTO puede ser el ServerId o el Id local si aún no está sincronizado.
+                LocalPresupuesto localPresupuesto = await _localDatabase.GetPresupuestoByServerIdAsync(presupuesto.Id)
+                                                ?? await _localDatabase.GetPresupuestoByIdAsync(presupuesto.Id);
+
+                if (localPresupuesto != null)
                 {
-                    // Asignar un Id temporal para evitar registros con valor 0
-                    presupuesto.Id = GenerarIdAleatorio();
-                    presupuesto.CreatedAt = DateTime.Now;
+                    // --- EL REGISTRO EXISTE: ACTUALIZAR ---
+                    // Se actualizan los campos del objeto local encontrado con los valores del DTO.
+                    localPresupuesto.NombrePresupuesto = presupuesto.NombrePresupuesto;
+                    localPresupuesto.FechaInicioPresupuesto = presupuesto.FechaInicioPresupuesto;
+                    localPresupuesto.FechaFinPresupuesto = presupuesto.FechaFinPresupuesto;
+                    localPresupuesto.TotalPresupuesto = presupuesto.TotalPresupuesto;
+
+                    // ¡Esta es la línea clave para tu problema!
+                    // Se actualiza el monto ejecutado en el objeto que se va a guardar.
+                    localPresupuesto.MontoEjePresupuesto = presupuesto.MontoEjePresupuesto;
+                }
+                else
+                {
+                    // --- EL REGISTRO NO EXISTE: CREAR UNO NUEVO ---
+                    // Se mapea el DTO a un nuevo objeto local para la inserción.
+                    localPresupuesto = presupuesto.ToLocal();
+                    localPresupuesto.CreatedAt = DateTime.UtcNow;
+                    localPresupuesto.Id = 0; // Se asegura que el Id local sea 0 para que SQLite lo autoincremente.
                 }
 
-                var localPresupuesto = presupuesto.ToLocal();
-                if (presupuesto.Id != 0 && localPresupuesto.ServerId == null)
-                {
-                    localPresupuesto.ServerId = presupuesto.Id;
-                }
+                // Marcar como no sincronizado para que se intente enviar al servidor.
+                localPresupuesto.IsSynced = false;
 
+                // Paso 2: Guardar en la base de datos local.
+                // `SavePresupuestoAsync` ahora hará un UPDATE porque localPresupuesto.Id tiene un valor.
                 await _localDatabase.SavePresupuestoAsync(localPresupuesto);
 
+                // Paso 3: Intentar sincronizar con Supabase si hay conexión.
                 if (_connectivity.NetworkAccess == NetworkAccess.Internet)
                 {
                     try
                     {
-                        var supabasePresupuesto = presupuesto.ToSupabase();
+                        var supabasePresupuesto = localPresupuesto.ToDto().ToSupabase();
                         var response = await _supabaseClient.From<SupabasePresupuesto>().Upsert(supabasePresupuesto);
                         var syncedPresupuesto = response.Models.FirstOrDefault();
 
@@ -612,22 +632,16 @@ namespace DelCorp.Services
                             localPresupuesto.CreatedAt = syncedPresupuesto.CreatedAt;
                             localPresupuesto.IsSynced = true;
                             await _localDatabase.SavePresupuestoAsync(localPresupuesto);
-                            return syncedPresupuesto.ToDto();
                         }
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError($"Error al sincronizar presupuesto: {ex.Message}");
-                        localPresupuesto.IsSynced = false;
-                        await _localDatabase.SavePresupuestoAsync(localPresupuesto);
+                        // `IsSynced` ya está en false, por lo que no se necesita hacer nada más.
                     }
                 }
-                else
-                {
-                    localPresupuesto.IsSynced = false;
-                    await _localDatabase.SavePresupuestoAsync(localPresupuesto);
-                }
 
+                // Devolver el DTO actualizado desde el estado local.
                 return localPresupuesto.ToDto();
             }
             catch (Exception ex)
