@@ -1646,5 +1646,88 @@ namespace DelCorp.Services
 
             return syncedDto ?? actividad; // Devolver el DTO sincronizado si está disponible, sino el original (que ahora podría tener ID)
         }
+
+        // --- RegistroRecursoUti methods ---
+        public async Task<IEnumerable<RegistroRecursoUti>> GetRegistrosRecursosUtiBySubEtapaIdAsync(long subEtapaId)
+        {
+            try
+            {
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    var response = await _supabaseClient.From<SupabaseRegistroRecursoUti>()
+                                                        .Filter("id_sub_etapa", Postgrest.Constants.Operator.Equals, subEtapaId.ToString())
+                                                        .Get();
+                    var dtos = response.Models.ToDtoList();
+
+                    var allRecursos = await GetRecursosAsync();
+                    var allUniMedRe = await GetUniMedReAsync();
+                    foreach (var dto in dtos)
+                    {
+                        dto.Recurso = allRecursos.FirstOrDefault(r => r.Id == dto.IdRecurso);
+                        dto.UniMedRe = allUniMedRe.FirstOrDefault(u => u.Id == dto.IdUniMedida);
+                    }
+                    return dtos;
+                }
+                else
+                {
+                    var localItems = await _localDatabase.GetRegistrosRecursosUtiBySubEtapaIdAsync(subEtapaId);
+                    return localItems.ToDtoList();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error obteniendo registros de recursos utilizados.");
+                return Enumerable.Empty<RegistroRecursoUti>();
+            }
+        }
+
+        public async Task<RegistroRecursoUti> SaveRegistroRecursoUtiAsync(RegistroRecursoUti registro)
+        {
+            var local = registro.ToLocal();
+            local.IsSynced = false;
+
+            if (registro.CantidadRecursosUti.HasValue && registro.PrecioUniRecursosUti.HasValue)
+            {
+                local.TotalRecursosUti = registro.CantidadRecursosUti.Value * registro.PrecioUniRecursosUti.Value;
+                registro.TotalRecursosUti = local.TotalRecursosUti;
+            }
+
+            await _localDatabase.SaveRegistroRecursoUtiAsync(local);
+
+            if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+            {
+                try
+                {
+                    var supabaseModel = registro.ToSupabase();
+                    supabaseModel.IdRegistroRecursoUti = 0;
+
+                    var response = await _supabaseClient.From<SupabaseRegistroRecursoUti>().Insert(supabaseModel);
+                    var synced = response.Models.FirstOrDefault();
+
+                    if (synced != null)
+                    {
+                        local.ServerId = synced.IdRegistroRecursoUti;
+                        local.IsSynced = true;
+                        await _localDatabase.SaveRegistroRecursoUtiAsync(local);
+                        return synced.ToDto();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error guardando registro de recurso utilizado en Supabase.");
+                }
+            }
+            return registro;
+        }
+
+        public async Task DeleteRegistroRecursoUtiAsync(long registroId)
+        {
+            if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+            {
+                await _supabaseClient.From<SupabaseRegistroRecursoUti>()
+                                         .Filter("id_registro_recurso_uti", Postgrest.Constants.Operator.Equals, registroId)
+                                         .Delete();
+            }
+        }
     }
 }

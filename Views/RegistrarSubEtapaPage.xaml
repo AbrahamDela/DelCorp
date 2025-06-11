@@ -78,6 +78,9 @@
                                 <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Text="Añadir/Ver Recursos"
                                         Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarSubEtapaViewModel}}, Path=NavigateToRegistrarRecursosCommand}"
                                         CommandParameter="{Binding .}" Margin="0,5,0,0"/>
+                                <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Text="Registrar Avance" BackgroundColor="Orange"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarSubEtapaViewModel}}, Path=NavigateToRegistrarAvanceCommand}"
+                                        CommandParameter="{Binding .}" Margin="0,5,0,0"/>
                             </Grid>
                         </Frame>
                     </DataTemplate>

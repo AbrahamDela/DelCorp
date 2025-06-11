@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="DelCorp.Views.RegistrarAvancePage"
+             xmlns:viewmodels="clr-namespace:DelCorp.ViewModels"
+             xmlns:models="clr-namespace:DelCorp.Models"
+             x:DataType="viewmodels:RegistrarAvanceViewModel"
+             Title="Registrar Avance de Recursos">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="10">
+
+            <Label Text="Recursos Presupuestados" FontAttributes="Bold" FontSize="Medium"/>
+            <CollectionView ItemsSource="{Binding RecursosPresupuestados}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:RecursoUti">
+                        <Frame Padding="10" Margin="0,5" BorderColor="LightGray">
+                            <HorizontalStackLayout Spacing="10">
+                                <Label Text="{Binding Recurso.NombreRecurso}" FontAttributes="Bold" VerticalOptions="Center"/>
+                                <Label Text="{Binding CantidadRecursosUti, StringFormat='Cant: {0}'}" VerticalOptions="Center"/>
+                                <Label Text="{Binding UniMedRe.AbreviaturaUniMedRe}" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <BoxView HeightRequest="1" Color="Gray" Margin="0,15"/>
+
+            <Label Text="Registrar Nuevo Uso de Recurso" FontAttributes="Bold" FontSize="Medium"/>
+
+            <Label Text="Recurso:"/>
+            <Picker ItemsSource="{Binding RecursosDisponibles}"
+                    ItemDisplayBinding="{Binding NombreRecurso}"
+                    SelectedItem="{Binding RecursoSeleccionado}"
+                    Title="Seleccione un recurso"/>
+
+            <Label Text="Fecha de Uso:"/>
+            <DatePicker Date="{Binding FechaDeUso}"/>
+            
+            <Label Text="Cantidad Utilizada:"/>
+            <Entry Keyboard="Numeric" Text="{Binding CantidadUtilizada}"/>
+
+            <Label Text="Precio Unitario Real:"/>
+            <Entry Keyboard="Numeric" Text="{Binding PrecioUnitario}"/>
+
+            <Button Text="Guardar Avance" Command="{Binding GuardarAvanceCommand}" Margin="0,20"/>
+
+            <BoxView HeightRequest="1" Color="Gray" Margin="0,15"/>
+            
+            <Label Text="Recursos Ya Registrados (Utilizados)" FontAttributes="Bold" FontSize="Medium"/>
+            <CollectionView ItemsSource="{Binding RecursosYaRegistrados}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:RegistroRecursoUti">
+                        <Frame Padding="10" Margin="0,5" BorderColor="LightBlue">
+                            <StackLayout>
+                                <Label Text="{Binding Recurso.NombreRecurso}" FontAttributes="Bold"/>
+                                <HorizontalStackLayout Spacing="10">
+                                    <Label Text="{Binding FechaRecursoUti, StringFormat='{0:dd/MM/yyyy}'}"/>
+                                    <Label Text="{Binding CantidadRecursosUti, StringFormat='Cant: {0}'}"/>
+                                    <Label Text="{Binding TotalRecursosUti, StringFormat='Total: C${0:N2}'}"/>
+                                </HorizontalStackLayout>
+                            </StackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

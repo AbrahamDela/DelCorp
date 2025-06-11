@@ -57,5 +57,10 @@ namespace DelCorp.Services
         Task<IEnumerable<Actividad>> GetActividadesAsync(long? categoriaActividadId = null, string searchText = null);
         Task<Actividad> GetActividadByIdAsync(long actividadId);
         Task<Actividad> SaveActividadAsync(Actividad actividad); // Para crear nuevas actividades desde la app
+
+        // Registro Recursos Utilizados
+        Task<IEnumerable<RegistroRecursoUti>> GetRegistrosRecursosUtiBySubEtapaIdAsync(long subEtapaId);
+        Task<RegistroRecursoUti> SaveRegistroRecursoUtiAsync(RegistroRecursoUti registro);
+        Task DeleteRegistroRecursoUtiAsync(long registroId);
     }
 }
