@@ -15,6 +15,9 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
     private readonly IDataService _dataService;
 
     [ObservableProperty]
+    private Presupuesto _currentPresupuesto;
+
+    [ObservableProperty]
     private decimal? _cantidadEtapa;
 
     [ObservableProperty]
@@ -94,6 +97,7 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
     {
         IdPresupuesto = presupuestoId;
         Debug.WriteLine($"[RegistrarEtapaVM] Inicializando con IdPresupuesto: {IdPresupuesto}");
+        CurrentPresupuesto = await _dataService.GetPresupuestoByIdAsync(presupuestoId);
         SetIsBusy(true);
         try
         {
@@ -214,6 +218,7 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
                 Etapas.Add(etapa);
             }
             HasPendingOrderChanges = false; // Resetea la bandera después de cargar desde la fuente
+            await UpdatePresupuestoTotalAsync();
         }
         catch (Exception ex)
         {
@@ -351,6 +356,20 @@ public partial class RegistrarEtapaViewModel : ObservableObject, IQueryAttributa
                 .Sum(s => s.CantidadSubEtapa.Value);
         }
         etapa.CantidadEtapa = cantidadCalculadaEtapa;
+    }
+
+    private async Task UpdatePresupuestoTotalAsync()
+    {
+        if (CurrentPresupuesto == null) return;
+
+        decimal newTotal = Etapas.Sum(e => e.MontoTotalEtapa ?? 0M);
+
+        if (CurrentPresupuesto.TotalPresupuesto != newTotal)
+        {
+            CurrentPresupuesto.TotalPresupuesto = newTotal;
+            await _dataService.SavePresupuesto(CurrentPresupuesto);
+            OnPropertyChanged(nameof(CurrentPresupuesto));
+        }
     }
 
     [RelayCommand]

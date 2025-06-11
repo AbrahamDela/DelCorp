@@ -581,49 +581,50 @@ namespace DelCorp.Services
         {
             try
             {
-                // Si hay conexión, primero guarda en Supabase para obtener el ID
+                if (presupuesto.Id == 0)
+                {
+                    presupuesto.CreatedAt = DateTime.Now;
+                }
+
+                var localPresupuesto = presupuesto.ToLocal();
+                if (presupuesto.Id != 0 && localPresupuesto.ServerId == null)
+                {
+                    localPresupuesto.ServerId = presupuesto.Id;
+                }
+
+                await _localDatabase.SavePresupuestoAsync(localPresupuesto);
+
                 if (_connectivity.NetworkAccess == NetworkAccess.Internet)
                 {
                     try
                     {
-                        presupuesto.Id = GenerarIdAleatorio();
-                        presupuesto.CreatedAt = DateTime.Now;
-
-                        // Convertir a modelo Supabase
                         var supabasePresupuesto = presupuesto.ToSupabase();
-
-                        // Enviar al servidor
                         var response = await _supabaseClient.From<SupabasePresupuesto>().Upsert(supabasePresupuesto);
                         var syncedPresupuesto = response.Models.FirstOrDefault();
 
                         if (syncedPresupuesto != null)
                         {
-                            // Actualizar el modelo con el ID y fecha generados por Supabase
-                            presupuesto.Id = syncedPresupuesto.Id;
-                            presupuesto.CreatedAt = syncedPresupuesto.CreatedAt;
-
-                            // Guardar localmente con el ID de Supabase
-                            var localPresupuesto = presupuesto.ToLocal();
                             localPresupuesto.ServerId = syncedPresupuesto.Id;
+                            localPresupuesto.CreatedAt = syncedPresupuesto.CreatedAt;
                             localPresupuesto.IsSynced = true;
                             await _localDatabase.SavePresupuestoAsync(localPresupuesto);
-
                             return syncedPresupuesto.ToDto();
                         }
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError($"Error al sincronizar presupuesto: {ex.Message}");
-                        System.Diagnostics.Debug.WriteLine($"Error al sincronizar presupuesto: {ex.Message}");
+                        localPresupuesto.IsSynced = false;
+                        await _localDatabase.SavePresupuestoAsync(localPresupuesto);
                     }
                 }
+                else
+                {
+                    localPresupuesto.IsSynced = false;
+                    await _localDatabase.SavePresupuestoAsync(localPresupuesto);
+                }
 
-                // Si no hay conexión, guardar localmente sin ID de servidor
-                var localPresupuestoOffline = presupuesto.ToLocal();
-                localPresupuestoOffline.IsSynced = false;
-                await _localDatabase.SavePresupuestoAsync(localPresupuestoOffline);
-
-                return localPresupuestoOffline.ToDto();
+                return localPresupuesto.ToDto();
             }
             catch (Exception ex)
             {
@@ -767,6 +768,58 @@ namespace DelCorp.Services
                 _logger.LogError($"Error al eliminar presupuesto: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"Error al eliminar presupuesto: {ex.Message}");
                 return false;
+            }
+        }
+
+        public async Task<Presupuesto> GetPresupuestoByIdAsync(long presupuestoId)
+        {
+            try
+            {
+                var localPresupuesto = await _localDatabase.GetPresupuestoByServerIdAsync(presupuestoId);
+                if (localPresupuesto == null)
+                {
+                    var allLocal = await _localDatabase.GetAllPresupuestosAsync();
+                    localPresupuesto = allLocal.FirstOrDefault(p => p.Id == presupuestoId);
+                }
+
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+                {
+                    try
+                    {
+                        var response = await _supabaseClient
+                            .From<SupabasePresupuesto>()
+                            .Filter("id", Postgrest.Constants.Operator.Equals, presupuestoId.ToString())
+                            .Single();
+
+                        if (response != null)
+                        {
+                            var remoteDto = response.ToDto();
+                            if (localPresupuesto == null || (localPresupuesto.ServerId == remoteDto.Id && localPresupuesto.IsSynced))
+                            {
+                                var updatedLocal = remoteDto.ToLocal();
+                                if (localPresupuesto != null) updatedLocal.Id = localPresupuesto.Id;
+                                updatedLocal.IsSynced = true;
+                                await _localDatabase.SavePresupuestoAsync(updatedLocal);
+                            }
+                            return remoteDto;
+                        }
+                    }
+                    catch (Postgrest.Exceptions.PostgrestException pgex) when (pgex.Message.Contains("PGRST116"))
+                    {
+                        _logger.LogWarning($"Presupuesto with ID {presupuestoId} not found on server. PGRST116.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error fetching Presupuesto {presupuestoId} from Supabase. Falling back to local if available.");
+                    }
+                }
+
+                return localPresupuesto?.ToDto();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error in GetPresupuestoByIdAsync for {presupuestoId}.");
+                return null;
             }
         }
 

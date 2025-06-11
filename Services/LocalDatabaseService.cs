@@ -118,6 +118,12 @@ public class LocalDatabaseService : IDisposable
             .FirstOrDefaultAsync(p => p.ServerId == serverId);
     }
 
+    public async Task<LocalPresupuesto> GetPresupuestoByIdAsync(long id)
+    {
+        return await _database.Table<LocalPresupuesto>()
+            .FirstOrDefaultAsync(p => p.Id == (int)id || p.ServerId == id);
+    }
+
     public async Task SavePresupuestoAsync(LocalPresupuesto presupuesto)
     {
         // Verifica si el presupuesto ya tiene un ID local.
