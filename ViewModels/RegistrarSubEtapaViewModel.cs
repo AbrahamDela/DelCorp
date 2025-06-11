@@ -419,13 +419,6 @@ public partial class RegistrarSubEtapaViewModel : ObservableObject, IQueryAttrib
         }
     }
 
-    [RelayCommand]
-    private async Task NavigateToRegistroRecursos(SubEtapa subEtapa)
-    {
-        if (subEtapa == null) return;
-        await Shell.Current.GoToAsync($"{nameof(RegistroRecursosPage)}?idSubEtapa={subEtapa.Id}");
-    }
-
     // --- MÉTODOS Y COMANDOS PARA REORDENAMIENTO OPTIMIZADO DE SUBETAPAS ---
     private void LocalRenumberSubEtapas()
     {
