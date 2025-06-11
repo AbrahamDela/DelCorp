@@ -24,6 +24,7 @@ public class LocalDatabaseService : IDisposable
         _database.CreateTableAsync<LocalRecursoUti>().Wait();
         _database.CreateTableAsync<LocalCategoriaActividad>().Wait();
         _database.CreateTableAsync<LocalActividad>().Wait();
+        _database.CreateTableAsync<LocalRegistroRecursoUti>().Wait();
     }
 
     public async Task ClearSessionAsync()
@@ -393,6 +394,29 @@ public class LocalDatabaseService : IDisposable
 
     public async Task<List<LocalRecursoUti>> GetUnsyncedRecursosUtiAsync() =>
         await _database.Table<LocalRecursoUti>().Where(r => !r.IsSynced).ToListAsync();
+
+    // RegistroRecursoUti helpers
+    public async Task<List<LocalRegistroRecursoUti>> GetRegistrosRecursosUtiBySubEtapaIdAsync(long subEtapaId)
+    {
+        return await _database.Table<LocalRegistroRecursoUti>().Where(r => r.IdSubEtapa == subEtapaId).ToListAsync();
+    }
+
+    public async Task SaveRegistroRecursoUtiAsync(LocalRegistroRecursoUti item)
+    {
+        if (item.LocalId != 0)
+        {
+            await _database.UpdateAsync(item);
+        }
+        else
+        {
+            await _database.InsertAsync(item);
+        }
+    }
+
+    public async Task DeleteRegistroRecursoUtiAsync(long localId)
+    {
+        await _database.Table<LocalRegistroRecursoUti>().DeleteAsync(r => r.LocalId == localId);
+    }
 
     // Para LocalCategoriaActividad
     public async Task<List<LocalCategoriaActividad>> GetCategoriasActividadAsync() =>
