@@ -7,15 +7,15 @@
              x:DataType="viewmodel:EditPresupuestoViewModel"
              Title="Editar Presupuesto">
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="15" BindableLayout.ItemsSource="{Binding PresupuestoToEdit}">
+        <VerticalStackLayout Padding="20" Spacing="15">
             <Label Text="Nombre del Presupuesto" />
-            <Entry Text="{Binding NombrePresupuesto}" />
+            <Entry Text="{Binding PresupuestoToEdit.NombrePresupuesto}" />
             
             <Label Text="Fecha de Inicio" />
-            <DatePicker Date="{Binding FechaInicioPresupuesto, TargetNullValue={x:Static sys:DateTime.Now}}" />
+            <DatePicker Date="{Binding PresupuestoToEdit.FechaInicioPresupuesto, TargetNullValue={x:Static sys:DateTime.Now}}" />
 
             <Label Text="Fecha de Fin" />
-            <DatePicker Date="{Binding FechaFinPresupuesto, TargetNullValue={x:Static sys:DateTime.Now}}" />
+            <DatePicker Date="{Binding PresupuestoToEdit.FechaFinPresupuesto, TargetNullValue={x:Static sys:DateTime.Now}}" />
 
             <Button Text="Actualizar Presupuesto" Command="{Binding UpdatePresupuestoCommand}" IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"/>
             <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" />
