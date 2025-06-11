@@ -43,6 +43,7 @@ namespace DelCorp
             // ViewModels
             builder.Services.AddSingleton<ProjectViewModel>();
             builder.Services.AddTransient<AddProjectViewModel>();
+            builder.Services.AddTransient<EditProjectViewModel>();
             builder.Services.AddTransient<ProjectDetailViewModel>();
             builder.Services.AddTransient<LoginViewModel>();
             builder.Services.AddTransient<RegisterViewModel>();
@@ -53,11 +54,13 @@ namespace DelCorp
             builder.Services.AddTransient<RegistrarSubEtapaViewModel>();
             builder.Services.AddTransient<RegistrarRecursoUtiViewModel>();
             builder.Services.AddTransient<RegistrarAvanceViewModel>();
+            builder.Services.AddTransient<EditPresupuestoViewModel>();
 
             // Views
             builder.Services.AddSingleton<ProjectPage>();
             builder.Services.AddTransient<AddProjectPage>();
             builder.Services.AddTransient<ProjectDetailPage>();
+            builder.Services.AddTransient<EditProjectPage>();
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<RegisterPage>();
             builder.Services.AddTransient<UserProfilePage>();
@@ -67,6 +70,7 @@ namespace DelCorp
             builder.Services.AddTransient<RegistrarSubEtapaPage>();
             builder.Services.AddTransient<RegistrarRecursoUtiPage>();
             builder.Services.AddTransient<RegistrarAvancePage>();
+            builder.Services.AddTransient<EditPresupuestoPage>();
 
             // Servicios
             builder.Services.AddSingleton<IDataService, OfflineFirstDataService>();

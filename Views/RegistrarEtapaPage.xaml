@@ -45,6 +45,7 @@
                     IsEnabled="{Binding IsNotBusy}" />
 
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+            <Button Text="Editar Detalles del Presupuesto" Command="{Binding EditPresupuestoCommand}" />
 
 
             <Label Text="Etapas Registradas" FontAttributes="Bold" FontSize="Medium" Margin="0,20,0,0"/>
