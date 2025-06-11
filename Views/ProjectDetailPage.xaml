@@ -1,65 +1,131 @@
-<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:viewmodels="clr-namespace:DelCorp.ViewModels"
-             xmlns:models="clr-namespace:DelCorp.Models"
              x:Class="DelCorp.Views.ProjectDetailPage"
-             x:DataType="viewmodels:ProjectDetailViewModel"
-             Title="{Binding Project.NombreProyecto}">
+             xmlns:viewmodel="clr-namespace:DelCorp.ViewModels"
+             xmlns:models="clr-namespace:DelCorp.Models"
+             Title="Detalles del Proyecto"
+             x:DataType="viewmodel:ProjectDetailViewModel">
+
     <ScrollView>
-        <VerticalStackLayout Spacing="10" Padding="20">
-            <!-- Project Details -->
-            <Label Text="{Binding Project.NombreProyecto}" FontSize="Header" FontAttributes="Bold" />
-            <Label Text="{Binding Project.DescripcionProyecto}" />
-            <!-- ... otros detalles del proyecto ... -->
+        <VerticalStackLayout Spacing="15" Padding="20">
+            <!-- Nombre del Proyecto -->
+            <Frame BorderColor="LightGray" Padding="15">
+                <VerticalStackLayout>
+                    <Label 
+                        Text="Nombre del Proyecto" 
+                        FontSize="16" 
+                        FontAttributes="Bold"/>
+                    <Label 
+                        Text="{Binding Project.NombreProyecto}" 
+                        FontSize="18"/>
+                </VerticalStackLayout>
+            </Frame>
 
-            <!-- Budget Selection and Execution -->
-            <BoxView HeightRequest="1" Color="Gray" Margin="0,10" />
-            <Label Text="Ejecución de Presupuestos" FontSize="Title" FontAttributes="Bold"/>
+            <!-- Fechas -->
+            <Frame BorderColor="LightGray" Padding="15">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
+                    <Label 
+                        Grid.Row="0" Grid.Column="0" 
+                        Text="Fecha de Creación" 
+                        FontAttributes="Bold"/>
+                    <Label 
+                        Grid.Row="1" Grid.Column="0" 
+                        Text="{Binding Project.CreatedAt, StringFormat='{0:dd/MM/yyyy HH:mm}'}"/>
 
-            <Picker Title="Seleccione un Presupuesto"
-                    ItemsSource="{Binding Presupuestos}"
-                    ItemDisplayBinding="{Binding NombrePresupuesto}"
-                    SelectedItem="{Binding SelectedPresupuesto}"/>
-            
-            <CollectionView ItemsSource="{Binding EtapasDelPresupuesto}">
+                    <Label 
+                        Grid.Row="0" Grid.Column="1" 
+                        Text="Fecha de Inicio" 
+                        FontAttributes="Bold"/>
+                    <Label 
+                        Grid.Row="1" Grid.Column="1" 
+                        Text="{Binding Project.FechaInicioProyecto, StringFormat='{0:dd/MM/yyyy}'}"
+                        TextColor="{StaticResource Primary}"/>
+
+                    <Label 
+                        Grid.Row="2" Grid.Column="0" 
+                        Text="Fecha de Fin" 
+                        FontAttributes="Bold"/>
+                    <Label 
+                        Grid.Row="3" Grid.Column="0" 
+                        Text="{Binding Project.FechaFinProyecto, StringFormat='{0:dd/MM/yyyy}'}"
+                        TextColor="{StaticResource Primary}"/>
+                </Grid>
+            </Frame>
+
+            <!-- Descripción -->
+            <Frame BorderColor="LightGray" Padding="15">
+                <VerticalStackLayout>
+                    <Label 
+                        Text="Descripción" 
+                        FontSize="16" 
+                        FontAttributes="Bold"/>
+                    <Label 
+                        Text="{Binding Project.DescripcionProyecto}"
+                        FontSize="14"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Ubicación -->
+            <Frame BorderColor="LightGray" Padding="15">
+                <VerticalStackLayout>
+                    <Label 
+                        Text="Dirección" 
+                        FontSize="16" 
+                        FontAttributes="Bold"/>
+                    <Label 
+                        Text="{Binding Project.DireccionProyecto}"
+                        FontSize="14"/>
+
+                    <Button 
+                        Text="Ver en Mapa" 
+                        Command="{Binding OpenLocationCommand}"
+                        IsVisible="{Binding VisibleMap}"
+                        Margin="0,10,0,0"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <CollectionView 
+                ItemsSource="{Binding Presupuestos}"
+                HeightRequest="300"
+                SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <Label 
+                        Text="No hay presupuestos registrados" 
+                        HorizontalOptions="Center" 
+                        TextColor="Gray"/>
+                </CollectionView.EmptyView>
+
                 <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:Etapa">
-                        <Frame Margin="0,5" Padding="10" BorderColor="LightGray" CornerRadius="5">
-                            <VerticalStackLayout Spacing="8">
-                                <Label Text="{Binding Actividad.NombreActividad}" FontAttributes="Bold" FontSize="Medium"/>
-                                
-                                <CollectionView ItemsSource="{Binding SubEtapas}">
-                                    <CollectionView.ItemTemplate>
-                                        <DataTemplate x:DataType="models:SubEtapa">
-                                            <Border StrokeShape="RoundRectangle 5" Stroke="Gainsboro" Padding="10" Margin="5,5,5,10">
-                                                <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto" RowSpacing="5">
-                                                    <Label Grid.Row="0" Grid.Column="0" Text="{Binding Actividad.NombreActividad}" FontAttributes="Italic"/>
-                                                    <Label Grid.Row="1" Grid.Column="0">
-                                                        <Label.FormattedText>
-                                                            <FormattedString>
-                                                                <Span Text="Monto Plan: "/>
-                                                                <Span Text="{Binding TotalSubEstapa, StringFormat='{0:C}'}" FontAttributes="Bold"/>
-                                                                <Span Text=" | Monto Ejec: "/>
-                                                                <Span Text="{Binding MontoEjeSubEtapa, StringFormat='{0:C}'}" FontAttributes="Bold"/>
-                                                            </FormattedString>
-                                                        </Label.FormattedText>
-                                                    </Label>
-                                                    <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Text="Registrar Ejecución"
-                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectDetailViewModel}}, Path=NavigateToRegistrarEjecucionCommand}"
-                                                            CommandParameter="{Binding .}"
-                                                            VerticalOptions="Center"/>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </CollectionView.ItemTemplate>
-                                </CollectionView>
-                            </VerticalStackLayout>
+                    <DataTemplate x:DataType="models:Presupuesto">
+                        <Frame Margin="0,5" Padding="10" BorderColor="LightGray">
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+                                <Label 
+                                    Grid.Row="0" Grid.Column="0"
+                                    Text="{Binding NombrePresupuesto}" 
+                                    FontAttributes="Bold"/>
+
+                                <Label 
+                                    Grid.Row="1" Grid.Column="0"
+                                    Text="Total Presupuesto:" 
+                                    FontSize="12"/>
+                                <Label 
+                                    Grid.Row="1" Grid.Column="1"
+                                    Text="{Binding TotalPresupuesto, StringFormat='C${0:N2}'}" 
+                                    FontAttributes="Bold"/>
+
+                                <Label 
+                                    Grid.Row="2" Grid.Column="0"
+                                    Text="Progreso:" 
+                                    FontSize="12"/>
+                                <Label 
+                                    Grid.Row="2" Grid.Column="1"
+                                    Text="{Binding ProgresoPresupuesto, StringFormat='{0:P0}'}" 
+                                    TextColor="{StaticResource Primary}"/>
+                            </Grid>
                         </Frame>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
-
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

@@ -102,15 +102,12 @@
 	  <MauiXaml Update="Views\RegistrarPresupuestoPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
-          <MauiXaml Update="Views\RegistrarRecursoUtiPage.xaml">
-            <Generator>MSBuild:Compile</Generator>
-          </MauiXaml>
-          <MauiXaml Update="Views\RegistrarRecursoEjecutadoPage.xaml">
-            <Generator>MSBuild:Compile</Generator>
-          </MauiXaml>
-          <MauiXaml Update="Views\RegistrarSubEtapaPage.xaml">
-            <Generator>MSBuild:Compile</Generator>
-          </MauiXaml>
+	  <MauiXaml Update="Views\RegistrarRecursoUtiPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\RegistrarSubEtapaPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
 	  <MauiXaml Update="Views\UserProfilePage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
