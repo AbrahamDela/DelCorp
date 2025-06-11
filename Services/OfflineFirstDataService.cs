@@ -1392,6 +1392,80 @@ namespace DelCorp.Services
             }
         }
 
+        // RegistroRecursoUti
+        public async Task<IEnumerable<RegistroRecursoUti>> GetRegistroRecursosBySubEtapaIdAsync(long subEtapaId)
+        {
+            var localItems = await _localDatabase.GetRegistroRecursosBySubEtapaIdAsync(subEtapaId);
+            var dtos = localItems.Select(l => l.ToDto()).ToList();
+
+            var allRecursos = await GetRecursosAsync();
+            var allUniMedRe = await GetUniMedReAsync();
+            foreach (var dto in dtos)
+            {
+                if (dto.IdRecurso.HasValue)
+                    dto.Recurso = allRecursos.FirstOrDefault(r => r.Id == dto.IdRecurso.Value);
+                if (dto.IdUniMedida.HasValue)
+                    dto.UniMedRe = allUniMedRe.FirstOrDefault(u => u.Id == dto.IdUniMedida.Value);
+            }
+            return dtos;
+        }
+
+        public async Task<RegistroRecursoUti> SaveRegistroRecursoAsync(RegistroRecursoUti registro)
+        {
+            var local = registro.ToLocal(isSynced: false);
+            if (registro.IdRegistroRecursoUti == 0) local.LocalId = 0;
+
+            await _localDatabase.SaveRegistroRecursoAsync(local);
+
+            if (_connectivity.NetworkAccess == NetworkAccess.Internet)
+            {
+                var supabaseModel = registro.ToSupabase();
+                if (local.ServerId == null) supabaseModel.IdRegistroRecursoUti = default;
+
+                var response = await _supabaseClient.From<SupabaseRegistroRecursoUti>().Upsert(supabaseModel);
+                var synced = response.Models.FirstOrDefault();
+                if (synced != null)
+                {
+                    local.ServerId = synced.IdRegistroRecursoUti;
+                    local.IsSynced = true;
+                    await _localDatabase.SaveRegistroRecursoAsync(local);
+                    registro = synced.ToDto();
+                }
+            }
+
+            await UpdateSubEtapaMontoEjecutado(registro.IdSubEtapa!.Value);
+            return registro;
+        }
+
+        public async Task DeleteRegistroRecursoAsync(long registroId)
+        {
+            var localItem = await _localDatabase.GetLocalRegistroRecursoByServerIdAsync(registroId);
+            if (localItem != null)
+            {
+                await _localDatabase.DeleteRegistroRecursoAsync(localItem.LocalId);
+                if (_connectivity.NetworkAccess == NetworkAccess.Internet && localItem.ServerId.HasValue)
+                {
+                    await _supabaseClient.From<SupabaseRegistroRecursoUti>()
+                                         .Filter("id_registro_recurso_uti", Postgrest.Constants.Operator.Equals, localItem.ServerId.Value)
+                                         .Delete();
+                }
+                await UpdateSubEtapaMontoEjecutado(localItem.IdSubEtapa!.Value);
+            }
+        }
+
+        private async Task UpdateSubEtapaMontoEjecutado(long subEtapaId)
+        {
+            var recursosRegistrados = await GetRegistroRecursosBySubEtapaIdAsync(subEtapaId);
+            decimal nuevoMontoEjecutado = recursosRegistrados.Sum(r => r.TotalRecursosUti ?? 0M);
+
+            var subEtapa = await GetSubEtapaByIdAsync(subEtapaId);
+            if (subEtapa != null)
+            {
+                subEtapa.MontoEjeSubEtapa = nuevoMontoEjecutado;
+                await SaveSubEtapa(subEtapa);
+            }
+        }
+
         // --- Implementación para CategoriasActividad ---
         public async Task<IEnumerable<CategoriaActividad>> GetCategoriasActividadAsync()
         {

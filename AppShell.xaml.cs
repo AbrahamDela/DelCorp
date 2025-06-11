@@ -14,6 +14,7 @@ namespace DelCorp
             RegisterForRoute<RegistrarEtapaPage>();
             RegisterForRoute<RegistrarSubEtapaPage>();
             RegisterForRoute<RegistrarRecursoUtiPage>();
+            RegisterForRoute<RegistroRecursosPage>();
         }
 
         protected void RegisterForRoute<T>()
