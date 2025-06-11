@@ -88,11 +88,19 @@ namespace DelCorp.ViewModels
                 if (!paged.Any())
                 {
                     _hasMoreItems = false;
+                    isLoadingMore = false;
                     return;
                 }
+
+                // Primero obtenemos el monto ejecutado de cada presupuesto
+                foreach (var presupuesto in paged)
+                {
+                    presupuesto.MontoEjePresupuesto = await _dataService.GetTotalEjecutadoForPresupuestoAsync(presupuesto.Id);
+                }
+
+                // Después los agregamos a la colección observable si aún no existen
                 foreach (var item in paged)
                 {
-                    item.MontoEjePresupuesto = await _dataService.GetTotalEjecutadoForPresupuestoAsync(item.Id);
                     if (!Presupuestos.Any(p => p.Id == item.Id))
                         Presupuestos.Add(item);
                 }
