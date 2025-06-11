@@ -1760,28 +1760,40 @@ namespace DelCorp.Services
             decimal totalGeneral = 0;
             try
             {
+                // Obtiene las etapas del presupuesto.
                 var etapas = await _localDatabase.GetEtapasByPresupuestoIdAsync(presupuestoId);
-                var idEtapas = etapas.Select(e => e.Id).ToList();
+
+                // --- INICIO DE LA CORRECCIÓN 1 ---
+                // Obtenemos los IDs de servidor (o locales si no hay de servidor) para usarlos como llave foránea.
+                var idEtapas = etapas.Select(e => e.ServerId ?? e.Id).ToList();
+                // --- FIN DE LA CORRECCIÓN 1 ---
 
                 if (!idEtapas.Any()) return 0;
 
                 var subEtapas = new List<LocalSubEtapa>();
                 foreach (var idEtapa in idEtapas)
                 {
+                    // La consulta ahora funciona porque compara la columna IdEtapa (que guarda el ServerId) con el idEtapa correcto.
                     var subs = await _localDatabase.GetSubEtapasByEtapaIdAsync(idEtapa);
                     subEtapas.AddRange(subs);
                 }
-                var idSubEtapas = subEtapas.Select(s => s.Id).ToList();
+
+                // --- INICIO DE LA CORRECCIÓN 2 ---
+                // Hacemos lo mismo para las subetapas: obtenemos sus IDs de servidor para el siguiente nivel de la consulta.
+                var idSubEtapas = subEtapas.Select(s => s.ServerId ?? s.Id).ToList();
+                // --- FIN DE LA CORRECCIÓN 2 ---
 
                 if (!idSubEtapas.Any()) return 0;
 
                 var registros = new List<LocalRegistroRecursoUti>();
                 foreach (var idSubEtapa in idSubEtapas)
                 {
+                    // Esta consulta ahora también funciona correctamente.
                     var regs = await _localDatabase.GetRegistrosRecursosUtiBySubEtapaIdAsync(idSubEtapa);
                     registros.AddRange(regs);
                 }
 
+                // La suma final ahora se hace sobre los registros correctos.
                 totalGeneral = registros.Sum(r => r.TotalRecursosUti ?? 0);
             }
             catch (Exception ex)
