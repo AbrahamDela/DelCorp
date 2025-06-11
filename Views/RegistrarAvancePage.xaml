@@ -52,14 +52,25 @@
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:RegistroRecursoUti">
                         <Frame Padding="10" Margin="0,5" BorderColor="LightBlue">
-                            <StackLayout>
-                                <Label Text="{Binding Recurso.NombreRecurso}" FontAttributes="Bold"/>
-                                <HorizontalStackLayout Spacing="10">
-                                    <Label Text="{Binding FechaRecursoUti, StringFormat='{0:dd/MM/yyyy}'}"/>
-                                    <Label Text="{Binding CantidadRecursosUti, StringFormat='Cant: {0}'}"/>
-                                    <Label Text="{Binding TotalRecursosUti, StringFormat='Total: C${0:N2}'}"/>
-                                </HorizontalStackLayout>
-                            </StackLayout>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackLayout Grid.Column="0">
+                                    <Label Text="{Binding Recurso.NombreRecurso}" FontAttributes="Bold"/>
+                                    <HorizontalStackLayout Spacing="10">
+                                        <Label Text="{Binding FechaRecursoUti, StringFormat='{0:dd/MM/yyyy}'}"/>
+                                        <Label Text="{Binding CantidadRecursosUti, StringFormat='Cant: {0}'}"/>
+                                        <Label Text="{Binding TotalRecursosUti, StringFormat='Total: C${0:N2}'}"/>
+                                    </HorizontalStackLayout>
+                                </StackLayout>
+                                <Button Grid.Column="1"
+                                        Text="X"
+                                        TextColor="White"
+                                        BackgroundColor="Red"
+                                        WidthRequest="40"
+                                        HeightRequest="40"
+                                        CornerRadius="20"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:RegistrarAvanceViewModel}}, Path=DeleteAvanceCommand}"
+                                        CommandParameter="{Binding .}"/>
+                            </Grid>
                         </Frame>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
