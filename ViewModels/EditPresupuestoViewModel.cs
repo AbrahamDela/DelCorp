@@ -30,6 +30,10 @@ namespace DelCorp.ViewModels
             {
                 IsLoading = true;
                 PresupuestoToEdit = await _dataService.GetPresupuestoByIdAsync(value);
+                if (PresupuestoToEdit != null)
+                {
+                    PresupuestoToEdit.MontoEjePresupuesto = await _dataService.GetTotalEjecutadoForPresupuestoAsync(PresupuestoToEdit.Id);
+                }
                 IsLoading = false;
             }
         }
